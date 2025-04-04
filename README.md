@@ -20,6 +20,21 @@ Real-time Japanese to English meeting translator using local LLMs. "Koe" means "
 - CMake 3.16+
 - Qt 6
 - C++17 compatible compiler
+- PortAudio 19.7.0+ (for audio capture)
+- Google Test 1.16.0+ (for running tests)
+
+Install dependencies on macOS:
+```bash
+# Core dependencies
+brew install cmake
+brew install qt@6
+
+# Audio capture
+brew install portaudio
+
+# Testing (optional)
+brew install googletest
+```
 
 ### Build Steps
 
@@ -99,7 +114,15 @@ Core interfaces are defined in the `include/interfaces` directory:
 
 If you encounter build errors:
 
-1. Make sure Qt6 is properly installed and configured
+1. Make sure all dependencies are properly installed:
+   ```bash
+   # Check installed versions
+   brew list --versions cmake
+   brew list --versions qt@6
+   brew list --versions portaudio
+   brew list --versions googletest
+   ```
+
 2. Try running a clean build with `./scripts/build.sh --clean`
 3. Check that your development environment supports C++17
 4. Ensure all dependencies are correctly installed

@@ -43,7 +43,11 @@ TEST_F(GGMLModelTest, TestLongText) {
     model.initialize();
     
     // Create a string longer than the typical context window
-    std::string longText(10000, 'あ');
+    std::string longText;
+    longText.reserve(10000 * 3);  // Reserve space for UTF-8 characters
+    for (int i = 0; i < 10000; ++i) {
+        longText += "あ";  // Append UTF-8 string instead of character
+    }
     
     TranslationOptions options;
     auto result = model.translate(longText, options);

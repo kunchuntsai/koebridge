@@ -6,34 +6,51 @@
 #pragma once
 
 #include <string>
+#include <vector>
+#include <memory>
+#include "../models/ggml_model.h"
+#include "data_structures.h"
 
 /**
  * @class ModelManager
- * @brief Manager class for handling translation models
- * 
- * This class manages the lifecycle of translation models, including
- * loading, unloading, and providing access to the models for translation
- * operations.
+ * @brief Manages translation models and their lifecycle
  */
 class ModelManager {
 public:
     /**
-     * @brief Constructor for ModelManager
+     * @brief Constructor
+     * @param modelPath Path to the directory containing model files
      */
-    ModelManager();
-    
+    explicit ModelManager(const std::string& modelPath = "./models");
+
     /**
-     * @brief Destructor for ModelManager
+     * @brief Get list of available models
+     * @return Vector of ModelInfo for available models
      */
-    ~ModelManager();
-    
+    std::vector<ModelInfo> getAvailableModels() const;
+
     /**
-     * @brief Load a translation model from a file
-     * @param modelPath Path to the model file
-     * @return bool True if model was loaded successfully, false otherwise
+     * @brief Load a model by ID
+     * @param modelId ID of the model to load
+     * @return bool True if model was loaded successfully
      */
-    bool loadModel(const std::string& modelPath);
-    
+    bool loadModel(const std::string& modelId);
+
+    /**
+     * @brief Check if a model is currently loaded
+     * @return bool True if a model is loaded
+     */
+    bool isModelLoaded() const;
+
+    /**
+     * @brief Get the currently active model
+     * @return ModelInfo Information about the active model
+     */
+    ModelInfo getActiveModel() const;
+
 private:
-    void* model; ///< Pointer to the loaded translation model
+    std::string modelPath_;           ///< Path to model directory
+    std::vector<ModelInfo> models_;   ///< List of available models
+    ModelInfo activeModel_;           ///< Currently active model
+    bool modelLoaded_;                ///< Flag indicating if a model is loaded
 };
