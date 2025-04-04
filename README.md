@@ -13,28 +13,40 @@ Real-time Japanese to English meeting translator using local LLMs. "Koe" means "
 - Low-latency operation for natural conversation flow
 - Optimized for Apple Silicon (M4)
 
-## Building
+## Prerequisites
 
-### Prerequisites
+Before building the project, ensure you have the following dependencies installed:
 
-- CMake 3.16+
-- Qt 6
-- C++17 compatible compiler
-- PortAudio 19.7.0+ (for audio capture)
-- Google Test 1.16.0+ (for running tests)
+### Required Dependencies
 
-Install dependencies on macOS:
+1. CMake (3.16 or higher)
+2. C++17 compatible compiler
+3. Qt 6 with the following components:
+   - Core
+   - Gui
+   - Widgets
+   - Concurrent
+4. PortAudio 19.7.0+ (for audio capture)
+5. Google Test 1.16.0+ (for running tests)
+
+### Installation on macOS
+
+Using Homebrew:
 ```bash
-# Core dependencies
+# Install build tools
 brew install cmake
+
+# Install Qt 6
 brew install qt@6
 
-# Audio capture
+# Install PortAudio
 brew install portaudio
 
-# Testing (optional)
+# Install Google Test
 brew install googletest
 ```
+
+## Building
 
 ### Build Steps
 

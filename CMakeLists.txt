@@ -10,7 +10,12 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
 # Find required packages
-find_package(Qt6 COMPONENTS Core Widgets REQUIRED)
+find_package(Qt6 REQUIRED COMPONENTS
+    Core
+    Gui
+    Widgets
+    Concurrent
+)
 
 # Find PortAudio using pkg-config
 find_package(PkgConfig REQUIRED)
@@ -64,8 +69,11 @@ target_include_directories(koebridge_lib PUBLIC
 # Link libraries for the core library
 target_link_libraries(koebridge_lib PUBLIC
     Qt6::Core
+    Qt6::Gui
     Qt6::Widgets
+    Qt6::Concurrent
     ${PORTAUDIO_LIBRARIES}
+    ${GTEST_LIBRARIES}
 )
 
 # Create main executable

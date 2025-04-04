@@ -3,14 +3,14 @@
 # Function to display usage information
 show_usage() {
     echo "Usage: $0 [OPTIONS]"
-    echo "Build and run koebridge tests"
+    echo "Build and run tests for the koebridge project"
     echo ""
     echo "Options:"
     echo "  -c, --clean    Clean build (remove and recreate build directory)"
-    echo "  -b, --build    Only build tests without running them"
-    echo "  -r, --run      Only run tests without rebuilding"
-    echo "  -f, --filter   Filter tests to run (e.g., AudioCaptureTest.*)"
     echo "  -h, --help     Display this help message"
+    echo "  --audio        Run only audio-related tests"
+    echo "  --translation  Run only translation-related tests"
+    echo "  --all          Run all tests (default)"
 }
 
 # Get the directory where the script is located
@@ -20,9 +20,7 @@ PROJECT_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"
 
 # Parse command line arguments
 CLEAN=false
-BUILD_ONLY=false
-RUN_ONLY=false
-TEST_FILTER=""
+TEST_MODULE="all"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -30,21 +28,21 @@ while [[ $# -gt 0 ]]; do
             CLEAN=true
             shift
             ;;
-        -b|--build)
-            BUILD_ONLY=true
-            shift
-            ;;
-        -r|--run)
-            RUN_ONLY=true
-            shift
-            ;;
-        -f|--filter)
-            TEST_FILTER="$2"
-            shift 2
-            ;;
         -h|--help)
             show_usage
             exit 0
+            ;;
+        --audio)
+            TEST_MODULE="audio"
+            shift
+            ;;
+        --translation)
+            TEST_MODULE="translation"
+            shift
+            ;;
+        --all)
+            TEST_MODULE="all"
+            shift
             ;;
         *)
             echo "Unknown option: $1"
@@ -71,35 +69,32 @@ fi
 # Navigate to build directory
 cd build
 
-# Build tests if not only running
-if [ "$RUN_ONLY" = false ]; then
-    echo "Configuring CMake with tests enabled..."
-    cmake -DBUILD_TESTS=ON ..
-    
-    echo "Building tests..."
-    make
-    
-    # Check build status
-    if [ $? -ne 0 ]; then
-        echo "Build failed. See error messages above."
-        exit 1
-    fi
-fi
+# Configure CMake with tests enabled
+echo "Configuring CMake with tests enabled..."
+cmake -DBUILD_TESTS=ON ..
 
-# Run tests if not only building
-if [ "$BUILD_ONLY" = false ]; then
-    echo "Running tests..."
-    if [ -n "$TEST_FILTER" ]; then
-        ./unit_tests --gtest_filter="$TEST_FILTER"
-    else
+# Build tests
+echo "Building tests..."
+make
+
+# Run tests based on module selection
+echo "Running tests..."
+case "$TEST_MODULE" in
+    "audio")
+        ./unit_tests --gtest_filter=AudioCaptureTest.*
+        ;;
+    "translation")
+        ./unit_tests --gtest_filter=TranslationServiceTest.*
+        ;;
+    "all")
         ./unit_tests
-    fi
-    
-    # Check test status
-    if [ $? -ne 0 ]; then
-        echo "Tests failed. See error messages above."
-        exit 1
-    fi
-fi
+        ;;
+esac
 
-echo "Test process completed successfully!" 
+# Check build status
+if [ $? -eq 0 ]; then
+    echo "Tests completed successfully!"
+else
+    echo "Tests failed. See error messages above."
+    exit 1
+fi 
