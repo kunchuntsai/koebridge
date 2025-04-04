@@ -1,0 +1,32 @@
+{
+    "models": {
+        "default": "medium",
+        "paths": {
+            "small": "resources/models/small",
+            "medium": "resources/models/medium",
+            "large": "resources/models/large"
+        }
+    },
+    "audio": {
+        "sampleRate": 16000,
+        "channels": 1,
+        "captureDevice": "default"
+    },
+    "translation": {
+        "temperature": 0.7,
+        "maxLength": 2048,
+        "style": "NATURAL",
+        "timeoutMs": 30000
+    },
+    "ui": {
+        "theme": "system",
+        "fontSize": 12,
+        "windowWidth": 800,
+        "windowHeight": 600
+    },
+    "logging": {
+        "level": "info",
+        "file": "logs/koebridge.log",
+        "console": true
+    }
+}

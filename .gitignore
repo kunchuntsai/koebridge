@@ -1,0 +1,38 @@
+# Build directories
+build/
+out/
+
+# IDE files
+.vscode/
+.idea/
+*.user
+*.swp
+
+# Compiled files
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+*.exe
+*.out
+
+# Generated files
+moc_*.cc
+ui_*.h
+qrc_*.cc
+
+# Model files (potentially large)
+resources/models/*
+!resources/models/.gitkeep
+
+# macOS specific
+.DS_Store
+
+# CMake generated
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
