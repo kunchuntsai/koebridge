@@ -51,6 +51,20 @@ After building, you can run KoeBridge using the provided run script:
 ./scripts/run.sh --help
 ```
 
+### Generating Documentation
+
+The project uses Doxygen for code documentation. You can generate the documentation using:
+
+```bash
+./scripts/doc-gen.sh
+```
+
+This will create HTML documentation in the `docs` directory. The documentation includes:
+- Detailed API documentation for all classes and interfaces
+- Class diagrams and call graphs
+- Project structure and architecture overview
+- Usage examples and implementation details
+
 ## Project Structure
 
 The project is organized into several modules:

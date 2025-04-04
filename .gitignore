@@ -23,6 +23,7 @@ out/
 moc_*.cc
 ui_*.h
 qrc_*.cc
+docs/html/
 
 # Model files (potentially large)
 resources/models/*
