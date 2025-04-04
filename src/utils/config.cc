@@ -1,14 +1,12 @@
 #include "config.h"
 #include <fstream>
 #include <sstream>
+#include <cstdlib>
+#include <stdexcept>
 
 Config& Config::getInstance() {
     static Config instance;
     return instance;
-}
-
-Config::Config() {
-    // Initialize with defaults
 }
 
 bool Config::load(const std::string& filePath) {
@@ -58,6 +56,10 @@ std::string Config::getString(const std::string& key, const std::string& default
     return (it != configData.end()) ? it->second : defaultValue;
 }
 
+std::string Config::getPath(const std::string& key, const std::string& defaultValue) {
+    return expandPath(getString(key, defaultValue));
+}
+
 int Config::getInt(const std::string& key, int defaultValue) {
     auto it = configData.find(key);
     if (it != configData.end()) {
@@ -94,6 +96,11 @@ void Config::setString(const std::string& key, const std::string& value) {
     configData[key] = value;
 }
 
+void Config::setPath(const std::string& key, const std::string& value) {
+    // Store the path as-is, expansion happens on retrieval
+    configData[key] = value;
+}
+
 void Config::setInt(const std::string& key, int value) {
     configData[key] = std::to_string(value);
 }
@@ -104,4 +111,42 @@ void Config::setFloat(const std::string& key, float value) {
 
 void Config::setBool(const std::string& key, bool value) {
     configData[key] = value ? "true" : "false";
+}
+
+std::string Config::expandPath(const std::string& path) const {
+    if (path.empty()) {
+        return path;
+    }
+
+    std::string result = path;
+    
+    // Expand home directory
+    if (result[0] == '~') {
+        const char* home = std::getenv("HOME");
+        if (home) {
+            result.replace(0, 1, home);
+        } else {
+            throw std::runtime_error("HOME environment variable not set");
+        }
+    }
+    
+    // Expand environment variables
+    size_t pos = 0;
+    while ((pos = result.find("${", pos)) != std::string::npos) {
+        size_t end = result.find("}", pos);
+        if (end == std::string::npos) {
+            break;
+        }
+        
+        std::string var = result.substr(pos + 2, end - pos - 2);
+        const char* value = std::getenv(var.c_str());
+        
+        if (value) {
+            result.replace(pos, end - pos + 1, value);
+        } else {
+            throw std::runtime_error("Environment variable not set: " + var);
+        }
+    }
+    
+    return result;
 }

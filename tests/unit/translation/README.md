@@ -1,109 +1,86 @@
-# Translation Tests
+# Translation Module Tests
 
-This directory contains tests for the translation components of KoeBridge, including the TranslationService and ModelManager classes.
+This directory contains unit tests for the translation module components.
 
 ## Test Coverage
 
-### TranslationService Tests (`translation_service_test.cc`)
+### ModelManager Tests
 
-The tests cover the following aspects of the TranslationService class:
+The `ModelManager` class tests cover the following aspects:
 
-1. **Service Lifecycle**
-   - Service initialization
-   - Service shutdown
-   - Resource cleanup
-   - State management
+1. **Model Discovery**
+   - Finding available models in the model directory
+   - Handling valid and invalid model files
+   - Filtering out empty or corrupted files
+   - Model metadata validation
 
-2. **Translation Operations**
-   - Synchronous translation
-   - Asynchronous translation
-   - Translation options management
-   - Translation result handling
+2. **Model Lifecycle**
+   - Loading models
+   - Unloading models
+   - Model state management
+   - Active model tracking
 
 3. **Error Handling**
-   - Uninitialized service usage
-   - Invalid model handling
-   - Error message reporting
+   - Invalid model files
+   - Non-existent models
+   - Empty model files
+   - Directory access errors
    - Resource cleanup
 
-4. **Options Management**
-   - Setting translation options
-   - Retrieving current options
-   - Option validation
-   - Default options
+4. **Model Download**
+   - Download progress reporting
+   - Existing model handling
+   - Download cancellation
+   - Error cases
 
-## Testing Instructions
+5. **Translation Model Integration**
+   - Model initialization
+   - Translation model creation
+   - Resource management
+   - Null handling
 
-### Prerequisites
+## Running Tests
 
-1. Install required dependencies:
-   ```bash
-   # On macOS
-   brew install qt@6
-   brew install googletest  # if not already installed
-   ```
+You can run the translation tests using:
 
-2. Ensure you have the test models directory set up:
-   ```bash
-   mkdir -p test_models
-   ```
+```bash
+./scripts/test.sh --translation
+```
 
-### Building Tests
+## Test Structure
 
-1. Configure CMake with tests enabled:
-   ```bash
-   mkdir build && cd build
-   cmake -DBUILD_TESTS=ON ..
-   ```
+Each test file follows the Google Test framework structure:
 
-2. Build the tests:
-   ```bash
-   make
-   ```
+```cpp
+class TranslationTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        // Test setup
+    }
+    
+    void TearDown() override {
+        // Test cleanup
+    }
+};
+```
 
-### Running Tests
+## Test Files
 
-1. Run all tests:
-   ```bash
-   ./unit_tests
-   ```
+- `model_manager_test.cc`: Tests for model management functionality
+- `translation_service_test.cc`: Tests for translation service
+- `model_manager_test.cc`: Tests for model management
 
-2. Run only translation service tests:
-   ```bash
-   ./unit_tests --gtest_filter=TranslationServiceTest.*
-   ```
+## Dependencies
 
-3. Run a specific test:
-   ```bash
-   ./unit_tests --gtest_filter=TranslationServiceTest.TestSynchronousTranslation
-   ```
+- Google Test Framework
+- C++17 Standard Library
+- Filesystem library
 
-### Test Output
+## Adding New Tests
 
-The tests will output:
-- Service initialization status
-- Translation results
-- Any error messages or warnings
-- Async operation completion status
-
-### Expected Results
-
-1. **Initialization Test**
-   - Should successfully initialize the service
-   - Should set default translation options
-   - Should load default model
-
-2. **Translation Test**
-   - Should handle Japanese input text
-   - Should return non-empty translation
-   - Should maintain source text in result
-
-3. **Async Translation Test**
-   - Should complete within timeout period
-   - Should invoke callback with result
-   - Should handle errors appropriately
-
-4. **Options Test**
-   - Should correctly set all options
-   - Should maintain option values
-   - Should apply options to translations
+When adding new tests:
+1. Create a new test file in this directory
+2. Follow the existing test structure
+3. Include comprehensive test cases
+4. Add proper cleanup in TearDown
+5. Document test coverage in this README

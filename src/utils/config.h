@@ -7,6 +7,9 @@
 
 #include <string>
 #include <map>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 /**
  * @class Config
@@ -46,6 +49,14 @@ public:
     std::string getString(const std::string& key, const std::string& defaultValue = "");
     
     /**
+     * @brief Get a path configuration value with expansion
+     * @param key The configuration key
+     * @param defaultValue Default value if key is not found
+     * @return std::string The expanded path value
+     */
+    std::string getPath(const std::string& key, const std::string& defaultValue = "");
+    
+    /**
      * @brief Get an integer configuration value
      * @param key The configuration key
      * @param defaultValue Default value if key is not found
@@ -77,6 +88,13 @@ public:
     void setString(const std::string& key, const std::string& value);
     
     /**
+     * @brief Set a path configuration value
+     * @param key The configuration key
+     * @param value The path value to set
+     */
+    void setPath(const std::string& key, const std::string& value);
+    
+    /**
      * @brief Set an integer configuration value
      * @param key The configuration key
      * @param value The value to set
@@ -96,12 +114,19 @@ public:
      * @param value The value to set
      */
     void setBool(const std::string& key, bool value);
-    
+
 private:
+    /**
+     * @brief Expand path with environment variables and home directory
+     * @param path The path to expand
+     * @return std::string The expanded path
+     */
+    std::string expandPath(const std::string& path) const;
+
     /**
      * @brief Private constructor for singleton pattern
      */
-    Config();
+    Config() = default;
     
     /**
      * @brief Deleted copy constructor
