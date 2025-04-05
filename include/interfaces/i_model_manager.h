@@ -7,9 +7,10 @@
 
 #include <string>
 #include <vector>
-#include <memory>
-#include <functional>
-#include "i_translation_model.h"
+#include "../src/translation/data_structures.h"
+
+namespace koebridge {
+namespace translation {
 
 // Forward declarations
 struct ModelInfo;
@@ -30,6 +31,25 @@ public:
     virtual ~IModelManager() = default;
     
     /**
+     * @brief Initialize the model manager
+     * @return bool True if initialization was successful, false otherwise
+     */
+    virtual bool initialize() = 0;
+    
+    /**
+     * @brief Load a translation model by path
+     * @param modelPath The path to the model to load
+     * @return bool True if model was loaded successfully, false otherwise
+     */
+    virtual bool loadModel(const std::string& modelPath) = 0;
+    
+    /**
+     * @brief Unload the currently loaded model
+     * @return bool True if the model was unloaded successfully, false otherwise
+     */
+    virtual bool unloadModel() = 0;
+    
+    /**
      * @brief Get list of available translation models
      * @return std::vector<ModelInfo> List of available models
      */
@@ -42,28 +62,10 @@ public:
     virtual ModelInfo getActiveModel() const = 0;
     
     /**
-     * @brief Load a translation model by ID
-     * @param modelId The unique identifier of the model to load
-     * @return bool True if model was loaded successfully, false otherwise
-     */
-    virtual bool loadModel(const std::string& modelId) = 0;
-    
-    /**
-     * @brief Unload the currently loaded model
-     */
-    virtual void unloadCurrentModel() = 0;
-    
-    /**
      * @brief Check if a model is currently loaded
      * @return bool True if a model is loaded and ready for use
      */
     virtual bool isModelLoaded() const = 0;
-    
-    /**
-     * @brief Get the translation model interface
-     * @return std::shared_ptr<ITranslationModel> Shared pointer to the translation model
-     */
-    virtual std::shared_ptr<ITranslationModel> getTranslationModel() = 0;
     
     /**
      * @brief Download a model by ID
@@ -73,3 +75,6 @@ public:
      */
     virtual bool downloadModel(const std::string& modelId, ProgressCallback callback) = 0;
 };
+
+} // namespace translation
+} // namespace koebridge

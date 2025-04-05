@@ -7,7 +7,10 @@
 
 #include <string>
 #include <future>
-#include "translation/data_structures.h"
+#include "../src/translation/data_structures.h"
+
+namespace koebridge {
+namespace translation {
 
 /**
  * @class ITranslationModel
@@ -63,3 +66,6 @@ public:
      */
     virtual InferenceStats getLastInferenceStats() const = 0;
 };
+
+} // namespace translation
+} // namespace koebridge
