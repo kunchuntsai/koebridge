@@ -6,6 +6,7 @@
 #pragma once
 
 #include <QMainWindow>
+#include <QString>
 
 class TranslationView;
 class QAction;
@@ -33,6 +34,12 @@ public:
      * @brief Destructor for MainWindow
      */
     ~MainWindow();
+    
+    /**
+     * @brief Update the translated text in the UI
+     * @param text The translated text to display
+     */
+    void updateTranslatedText(const QString& text);
     
 private slots:
     /**

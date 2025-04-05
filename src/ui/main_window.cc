@@ -69,3 +69,9 @@ void MainWindow::showSettings() {
     // Show settings dialog
     QMessageBox::information(this, tr("Settings"), tr("Settings dialog would appear here."));
 }
+
+void MainWindow::updateTranslatedText(const QString& text) {
+    if (translationView) {
+        translationView->updateEnglishText(text);
+    }
+}
