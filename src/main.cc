@@ -34,6 +34,9 @@ public:
     ModelInfo getActiveModel() const override { return {}; }
     bool isModelLoaded() const override { return true; }
     bool downloadModel(const std::string&, ProgressCallback) override { return true; }
+    std::shared_ptr<koebridge::translation::ITranslationModel> getTranslationModel() override {
+        return nullptr;
+    }
 };
 
 class MainWindow : public QMainWindow {

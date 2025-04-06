@@ -10,6 +10,7 @@
 #include <memory>
 #include <functional>
 #include "interfaces/i_model_manager.h"
+#include "interfaces/i_translation_model.h"
 #include "data_structures.h"
 
 namespace koebridge {
@@ -45,7 +46,7 @@ public:
     bool downloadModel(const std::string& modelId, ProgressCallback callback) override;
 
     // Additional methods specific to ModelManager
-    std::shared_ptr<ITranslationModel> getTranslationModel();
+    std::shared_ptr<ITranslationModel> getTranslationModel() override;
 
 private:
     /**
@@ -68,6 +69,7 @@ private:
     std::vector<ModelInfo> models_;   ///< List of available models
     ModelInfo activeModel_;           ///< Currently active model
     bool modelLoaded_;                ///< Flag indicating if a model is loaded
+    std::shared_ptr<ITranslationModel> translationModel_; ///< The currently loaded translation model
 };
 
 } // namespace translation

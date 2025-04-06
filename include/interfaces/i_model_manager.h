@@ -7,6 +7,7 @@
 
 #include <string>
 #include <vector>
+#include <memory>
 #include "../src/translation/data_structures.h"
 
 namespace koebridge {
@@ -14,6 +15,7 @@ namespace translation {
 
 // Forward declarations
 struct ModelInfo;
+class ITranslationModel;
 using ProgressCallback = std::function<void(int, const std::string&)>;
 
 /**
@@ -74,6 +76,12 @@ public:
      * @return bool True if download was successful, false otherwise
      */
     virtual bool downloadModel(const std::string& modelId, ProgressCallback callback) = 0;
+    
+    /**
+     * @brief Get the currently loaded translation model
+     * @return std::shared_ptr<ITranslationModel> Shared pointer to the translation model
+     */
+    virtual std::shared_ptr<ITranslationModel> getTranslationModel() = 0;
 };
 
 } // namespace translation

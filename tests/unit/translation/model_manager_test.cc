@@ -10,6 +10,36 @@
 #include <iostream>
 #include "../../../src/translation/model_manager.h"
 
+// Mock the GGMLModel for testing
+#include <memory>
+namespace koebridge {
+namespace models {
+    // Forward declarations to mock dependencies
+    class GGMLModel : public translation::ITranslationModel {
+    public:
+        explicit GGMLModel(const translation::ModelInfo& info) : modelInfo_(info) {}
+        bool initialize() override { return true; }
+        bool isInitialized() const override { return true; }
+        translation::TranslationResult translate(const std::string& text, const translation::TranslationOptions& options) override {
+            translation::TranslationResult result;
+            result.sourceText = text;
+            result.text = "Translated: " + text;
+            result.success = true;
+            return result;
+        }
+        std::future<translation::TranslationResult> translateAsync(const std::string& text, const translation::TranslationOptions& options) override {
+            return std::async(std::launch::async, [this, text, options]() {
+                return translate(text, options);
+            });
+        }
+        translation::ModelInfo getModelInfo() const override { return modelInfo_; }
+        translation::InferenceStats getLastInferenceStats() const override { return {}; }
+    private:
+        translation::ModelInfo modelInfo_;
+    };
+}
+}
+
 namespace fs = std::filesystem;
 using namespace koebridge::translation;
 

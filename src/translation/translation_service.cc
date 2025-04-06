@@ -4,6 +4,7 @@
  */
 
 #include "translation/translation_service.h"
+#include "interfaces/i_translation_model.h"
 #include "utils/logger.h"
 #include "utils/config.h"
 #include <QThread>
@@ -167,12 +168,25 @@ TranslationOptions TranslationService::getTranslationOptions() const {
 }
 
 TranslationResult TranslationService::translateInternal(const std::string& japaneseText) {
-    // TODO: Implement actual translation logic
     TranslationResult result;
     result.sourceText = japaneseText;
-    result.text = "Translated: " + japaneseText;
-    result.success = true;
-    return result;
+    
+    // Check if a model is loaded
+    auto model = modelManager_->getTranslationModel();
+    if (!model) {
+        result.success = false;
+        result.errorMessage = "No translation model loaded";
+        return result;
+    }
+    
+    try {
+        // Use the model to translate the text
+        return model->translate(japaneseText, options_);
+    } catch (const std::exception& e) {
+        result.success = false;
+        result.errorMessage = std::string("Translation error: ") + e.what();
+        return result;
+    }
 }
 
 bool TranslationService::validateInput(const std::string& input) const {

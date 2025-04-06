@@ -6,9 +6,11 @@
 #include "translation/model_manager.h"
 #include "utils/config.h"
 #include "utils/logger.h"
+#include "models/ggml_model.h"
 #include <QDir>
 #include <QFileInfo>
 #include <QStandardPaths>
+#include <iostream>
 
 namespace koebridge {
 namespace translation {
@@ -41,16 +43,17 @@ bool ModelManager::loadModel(const std::string& modelId) {
     if (modelLoaded_ && activeModel_.id == modelId) {
         return true;
     }
-    
-    // Unload current model if any
-    unloadCurrentModel();
-    
+
     // Find the model in the available models list
     for (const auto& model : models_) {
         if (model.id == modelId) {
-            // TODO: Implement actual model loading logic
-            
-            // For now, just update the active model
+            // Unload current model if any
+            if (modelLoaded_) {
+                unloadModel();
+            }
+
+            // TODO: Implement actual model loading with GGMLModel
+            // For now, just update the model info
             activeModel_ = model;
             modelLoaded_ = true;
             return true;
@@ -90,6 +93,7 @@ bool ModelManager::downloadModel(const std::string& modelId, ProgressCallback ca
 
 void ModelManager::unloadCurrentModel() {
     // Reset the state
+    translationModel_.reset();
     modelLoaded_ = false;
     activeModel_ = ModelInfo{};
 }
@@ -99,7 +103,8 @@ std::shared_ptr<ITranslationModel> ModelManager::getTranslationModel() {
         return nullptr;
     }
     
-    // TODO: Return the actual translation model
+    // TODO: Return the actual translation model when implemented
+    // For now, just return null to avoid undefined symbols
     return nullptr;
 }
 
@@ -125,11 +130,14 @@ void ModelManager::scanForModels() {
     
     QDir dir(QString::fromStdString(modelPath_));
     if (!dir.exists()) {
+        std::cerr << "Model directory does not exist: " << modelPath_ << std::endl;
         return;
     }
     
     // Scan directory for model files
     const auto entries = dir.entryInfoList(QDir::Files | QDir::Readable, QDir::Name);
+    std::cerr << "Found " << entries.size() << " files in model directory" << std::endl;
+    
     for (const auto& entry : entries) {
         // Filter for model files (simple check for now)
         if (entry.suffix() == "bin" || entry.suffix() == "ggml") {
@@ -140,8 +148,11 @@ void ModelManager::scanForModels() {
             info.lastModified = static_cast<std::time_t>(entry.lastModified().toSecsSinceEpoch());
             
             models_.push_back(info);
+            std::cerr << "Added model: " << info.id << " at " << info.path << std::endl;
         }
     }
+    
+    std::cerr << "Total models found: " << models_.size() << std::endl;
 }
 
 } // namespace translation
