@@ -8,16 +8,16 @@ show_usage() {
     echo "Options:"
     echo "  -h, --help     Display this help message"
     echo "  -l, --list     List available models"
-    echo "  -p, --path     Specify model download path (default: ./models)"
+    echo "  -p, --path     Specify model download path (default: ./_dataset/models)"
     echo "  -v, --version  Specify model version (default: latest)"
     echo ""
     echo "Example:"
-    echo "  $0 -p /path/to/models model1"
-    echo "  $0 --version 1.0.0 model2"
+    echo "  $0 -p /path/to/models nllb-ja-en"
+    echo "  $0 --version 1.0.0 nllb-ja-en"
 }
 
 # Default values
-MODEL_PATH="./models"
+MODEL_PATH="../_dataset/models"
 MODEL_VERSION="latest"
 
 # Parse command line arguments
@@ -29,9 +29,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -l|--list)
             echo "Available models:"
-            echo "  model1 - Japanese to English (small)"
-            echo "  model2 - Japanese to English (medium)"
-            echo "  model3 - Japanese to English (large)"
+            echo "  nllb-ja-en - NLLB-200 Distilled 600M (Japanese to English)"
+            echo "    - Optimized for Apple Silicon"
+            echo "    - Quantized for efficient inference"
+            echo "    - Size: ~1.2GB"
             exit 0
             ;;
         -p|--path)
@@ -59,51 +60,29 @@ fi
 # Create model directory if it doesn't exist
 mkdir -p "$MODEL_PATH"
 
-# Model URLs (replace with actual URLs)
-declare -A MODEL_URLS=(
-    ["model1"]="https://example.com/models/model1_v1.0.bin"
-    ["model2"]="https://example.com/models/model2_v1.0.bin"
-    ["model3"]="https://example.com/models/model3_v1.0.bin"
-)
-
-# Check if model exists
-if [ -z "${MODEL_URLS[$MODEL_ID]}" ]; then
-    echo "Error: Unknown model ID: $MODEL_ID"
-    echo "Use --list to see available models"
-    exit 1
-fi
-
-# Download URL
-DOWNLOAD_URL="${MODEL_URLS[$MODEL_ID]}"
-OUTPUT_FILE="$MODEL_PATH/${MODEL_ID}.bin"
-
-# Check if file already exists
-if [ -f "$OUTPUT_FILE" ]; then
-    echo "Model already exists at: $OUTPUT_FILE"
-    read -p "Do you want to overwrite it? (y/N) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Download cancelled"
-        exit 0
-    fi
-fi
+# Download model based on ID
+case "$MODEL_ID" in
+    "nllb-ja-en")
+        echo "Downloading NLLB-200 Distilled 600M (Japanese to English) model..."
+        MODEL_URL="https://huggingface.co/TheBloke/NLLB-200-Distilled-600M-GGML/resolve/main/nllb-200-distilled-600m-ja-en-q4_K_M.bin"
+        MODEL_FILE="nllb-200-distilled-600m-ja-en.bin"
+        ;;
+    *)
+        echo "Error: Unknown model ID: $MODEL_ID"
+        echo "Use --list to see available models"
+        exit 1
+        ;;
+esac
 
 # Download the model
-echo "Downloading model $MODEL_ID (version: $MODEL_VERSION)..."
-if command -v curl &> /dev/null; then
-    curl -L --progress-bar "$DOWNLOAD_URL" -o "$OUTPUT_FILE"
-elif command -v wget &> /dev/null; then
-    wget --progress=bar:force "$DOWNLOAD_URL" -O "$OUTPUT_FILE"
-else
-    echo "Error: Neither curl nor wget is installed"
-    exit 1
-fi
+echo "Downloading to: $MODEL_PATH/$MODEL_FILE"
+curl -L "$MODEL_URL" -o "$MODEL_PATH/$MODEL_FILE"
 
 # Check if download was successful
-if [ $? -eq 0 ] && [ -f "$OUTPUT_FILE" ]; then
-    echo "Download completed successfully"
-    echo "Model saved to: $OUTPUT_FILE"
+if [ $? -eq 0 ]; then
+    echo "Download completed successfully!"
+    echo "Model saved to: $MODEL_PATH/$MODEL_FILE"
 else
-    echo "Error: Download failed"
+    echo "Error: Failed to download model"
     exit 1
 fi 

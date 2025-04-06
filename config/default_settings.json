@@ -16,7 +16,12 @@
         "temperature": 0.7,
         "maxLength": 2048,
         "style": "NATURAL",
-        "timeoutMs": 30000
+        "timeoutMs": 30000,
+        "models": {
+            "small": "_dataset/models/small",
+            "medium": "_dataset/models/medium",
+            "large": "_dataset/models/large"
+        }
     },
     "ui": {
         "theme": "system",

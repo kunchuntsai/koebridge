@@ -18,10 +18,10 @@ SettingsDialog::SettingsDialog(QWidget *parent)
     audioDeviceCombo->addItem("Default Audio Device");
     
     whisperModelPath = new QLineEdit(this);
-    whisperModelPath->setText("resources/models/whisper-tiny.bin");
+    whisperModelPath->setText("_dataset/models/whisper-tiny.bin");
     
     translationModelPath = new QLineEdit(this);
-    translationModelPath->setText("resources/models/nllb-small.bin");
+    translationModelPath->setText("_dataset/models/nllb-small.bin");
     
     formLayout->addRow(tr("Audio Device:"), audioDeviceCombo);
     formLayout->addRow(tr("Whisper Model:"), whisperModelPath);

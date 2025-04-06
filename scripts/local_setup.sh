@@ -73,7 +73,12 @@ install_package "qt@6"
 
 # Check for required libraries
 echo "Checking required libraries..."
-command_exists portaudio-2.0
+if ! pkg-config --exists portaudio-2.0; then
+    echo "Warning: portaudio-2.0 library not found via pkg-config"
+    echo "This may cause issues with audio capture"
+else
+    echo "portaudio-2.0 found"
+fi
 
 # Change to project root directory
 cd "$PROJECT_ROOT"
@@ -114,8 +119,8 @@ channels = 1
 frames_per_buffer = 1024
 
 [translation]
-model_path = ~/.koebridge/models
-default_model = llama2-7b-chat
+model_path = ./_dataset/models
+default_model = nllb-ja-en
 
 [ui]
 window_width = 800
@@ -126,20 +131,11 @@ fi
 
 # Create models directory
 echo "Setting up models directory..."
-mkdir -p ~/.koebridge/models
+mkdir -p _dataset/models
 
 # Set up permissions
 echo "Setting up permissions..."
 chmod +x scripts/*.sh
-
-# Configure CMake with tests enabled
-cd build
-cmake .. \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DBUILD_TESTS=ON \
-    -DGGML_METAL=OFF \
-    -DGGML_USE_METAL=OFF
-cd ..
 
 echo "Local setup completed successfully!"
 echo ""
