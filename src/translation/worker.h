@@ -5,14 +5,18 @@
 
 #pragma once
 
-#include <QObject>
-#include <QQueue>
-#include <QMutex>
-#include <QWaitCondition>
+#include <string>
 #include <memory>
+#include <queue>
+#include <mutex>
+#include <condition_variable>
+#include <thread>
 #include <functional>
-#include "data_structures.h"
-#include "../include/interfaces/i_translation_model.h"
+#include "interfaces/i_translation_model.h"
+#include "translation/data_structures.h"
+
+namespace koebridge {
+namespace translation {
 
 /**
  * @typedef TranslationCallback
@@ -25,9 +29,9 @@ typedef std::function<void(const TranslationResult&)> TranslationCallback;
  * @brief Structure representing a translation request
  */
 struct TranslationRequest {
-    std::string text;                    ///< Text to translate
-    TranslationOptions options;          ///< Translation options
-    TranslationCallback callback;        ///< Callback function for results
+    std::string text;                ///< Text to translate
+    TranslationOptions options;      ///< Translation options
+    TranslationCallback callback;    ///< Callback for result
 };
 
 /**
@@ -37,9 +41,7 @@ struct TranslationRequest {
  * This class manages translation requests in a background thread, providing
  * asynchronous translation capabilities and progress reporting.
  */
-class TranslationWorker : public QObject {
-    Q_OBJECT
-
+class TranslationWorker {
 public:
     /**
      * @brief Constructor for TranslationWorker
@@ -50,7 +52,17 @@ public:
     /**
      * @brief Destructor for TranslationWorker
      */
-    ~TranslationWorker() override;
+    ~TranslationWorker();
+
+    /**
+     * @brief Start the worker thread
+     */
+    void start();
+    
+    /**
+     * @brief Stop the worker thread
+     */
+    void stop();
 
     /**
      * @brief Add a new translation request to the queue
@@ -59,34 +71,20 @@ public:
      * @param callback Callback function for results
      */
     void addRequest(const std::string& text, const TranslationOptions& options, TranslationCallback callback);
-    
-    /**
-     * @brief Stop the worker thread
-     */
-    void stop();
 
-signals:
-    /**
-     * @brief Signal emitted when all requests are processed
-     */
-    void finished();
-    
-    /**
-     * @brief Signal emitted to report translation progress
-     * @param percentComplete Progress percentage (0-100)
-     */
-    void translationProgress(int percentComplete);
-
-public slots:
+private:
     /**
      * @brief Process translation requests from the queue
      */
-    void process();
-
-private:
+    void processRequests();
+    
     std::shared_ptr<ITranslationModel> model_;     ///< Translation model
-    QQueue<TranslationRequest> requestQueue_;       ///< Queue of pending requests
-    QMutex mutex_;                                 ///< Mutex for thread synchronization
-    QWaitCondition condition_;                     ///< Condition variable for thread coordination
-    bool running_;                                 ///< Worker thread running flag
+    std::queue<TranslationRequest> requestQueue_;  ///< Queue of translation requests
+    std::mutex queueMutex_;                        ///< Mutex for queue access
+    std::condition_variable queueCondition_;       ///< Condition variable for queue
+    std::thread workerThread_;                     ///< Worker thread
+    bool running_ = false;                         ///< Worker running flag
 };
+
+} // namespace translation
+} // namespace koebridge

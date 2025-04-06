@@ -3,11 +3,16 @@
 # Function to display usage information
 show_usage() {
     echo "Usage: $0 [OPTIONS]"
-    echo "Run the koebridge application"
+    echo "Run the koebridge application or tests"
     echo ""
     echo "Options:"
     echo "  -d, --debug      Run in debug mode with additional logging"
     echo "  -h, --help       Display this help message"
+    echo "  --tests          Run the tests instead of the application"
+    echo "  --audio          Run only audio tests (must be used with --tests)"
+    echo "  --translation    Run only translation tests (must be used with --tests)"
+    echo "  --clean          Clean the build directory before building"
+    echo "  --build          Force rebuild before running (implied with --clean)"
 }
 
 # Get the directory where the script is located
@@ -17,6 +22,10 @@ PROJECT_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"
 
 # Default values
 DEBUG_MODE=false
+RUN_TESTS=false
+CLEAN_BUILD=false
+FORCE_BUILD=false
+TEST_FILTER="*"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -29,6 +38,27 @@ while [[ $# -gt 0 ]]; do
             show_usage
             exit 0
             ;;
+        --tests)
+            RUN_TESTS=true
+            shift
+            ;;
+        --audio)
+            TEST_FILTER="audio*"
+            shift
+            ;;
+        --translation)
+            TEST_FILTER="translation*"
+            shift
+            ;;
+        --clean)
+            CLEAN_BUILD=true
+            FORCE_BUILD=true
+            shift
+            ;;
+        --build)
+            FORCE_BUILD=true
+            shift
+            ;;
         *)
             echo "Unknown option: $1"
             show_usage
@@ -40,25 +70,127 @@ done
 # Change to project root directory
 cd "$PROJECT_ROOT"
 
-# Check if build directory exists
-if [ ! -d "build" ]; then
-    echo "Error: Build directory not found. Please build the project first."
-    echo "Run './scripts/build.sh' to build the project."
-    exit 1
-fi
-
-# Check if executable exists
-if [ ! -f "build/koebridge" ]; then
-    echo "Error: Executable not found. Please build the project first."
-    echo "Run './scripts/build.sh' to build the project."
-    exit 1
-fi
-
-# Run the application
-echo "Starting KoeBridge..."
+# Determine build type based on debug mode
 if [ "$DEBUG_MODE" = true ]; then
-    echo "Debug mode enabled"
-    KOEBRIDGE_DEBUG=1 ./build/koebridge
+    BUILD_TYPE="Debug"
+    BUILD_TYPE_LOWER="debug"
 else
-    ./build/koebridge
+    BUILD_TYPE="Release"
+    BUILD_TYPE_LOWER="release"
+fi
+
+# Build function to avoid code duplication
+function build_project() {
+    local build_tests=$1
+    local build_clean=$CLEAN_BUILD
+
+    echo "Building the project..."
+    
+    # Set build command
+    local build_cmd="./scripts/build.sh --$BUILD_TYPE_LOWER"
+    
+    # Add tests flag if needed
+    if [ "$build_tests" = true ]; then
+        build_cmd="$build_cmd --tests"
+    fi
+    
+    # Add clean flag if needed
+    if [ "$build_clean" = true ]; then
+        build_cmd="$build_cmd --clean"
+    fi
+    
+    # Execute build command
+    echo "Running: $build_cmd"
+    eval $build_cmd
+    
+    # Check if build was successful
+    if [ $? -ne 0 ]; then
+        echo "Build failed."
+        return 1
+    fi
+    
+    return 0
+}
+
+# If we're running tests
+if [ "$RUN_TESTS" = true ]; then
+    echo "Preparing to run tests..."
+    
+    # Build with tests enabled
+    build_project true
+    if [ $? -ne 0 ]; then
+        echo "Test build failed. Aborting test run."
+        exit 1
+    fi
+    
+    # Change to build directory
+    cd build
+    
+    # Define test executables
+    TEST_EXECUTABLES=(
+        "tests/audio_capture_test"
+        "tests/translation_service_test"
+        "tests/model_manager_test"
+    )
+    
+    # Run the tests directly instead of using ctest
+    echo "Running tests..."
+    
+    # Initialize exit code
+    exit_code=0
+    
+    # Filter tests if needed
+    if [ "$TEST_FILTER" = "audio*" ]; then
+        echo "Running audio tests..."
+        if [ -f "tests/audio_capture_test" ]; then
+            ./tests/audio_capture_test
+        else
+            echo "Audio test executable not found. It may not have been built."
+        fi
+    elif [ "$TEST_FILTER" = "translation*" ]; then
+        echo "Running translation tests..."
+        if [ -f "tests/translation_service_test" ]; then
+            ./tests/translation_service_test
+        fi
+        if [ -f "tests/model_manager_test" ]; then
+            ./tests/model_manager_test
+        fi
+    else
+        # Run all tests
+        echo "Running all tests..."
+        for test in "${TEST_EXECUTABLES[@]}"; do
+            if [ -f "$test" ]; then
+                echo "Running $test..."
+                ./$test
+                if [ $? -ne 0 ]; then
+                    echo "Test $test failed."
+                    exit_code=1
+                fi
+            else
+                echo "Test executable $test not found. It may not have been built."
+            fi
+        done
+    fi
+    
+    exit $exit_code
+else
+    # Running the main application
+    
+    # Check if build directory exists or force build is set
+    if [ ! -d "build" ] || [ ! -f "build/koebridge" ] || [ "$FORCE_BUILD" = true ]; then
+        build_project false
+        if [ $? -ne 0 ]; then
+            echo "Application build failed. Cannot run the application."
+            exit 1
+        fi
+    fi
+    
+    # Run the application
+    echo "Starting KoeBridge..."
+    if [ "$DEBUG_MODE" = true ]; then
+        echo "Debug mode enabled"
+        KOEBRIDGE_DEBUG=1 ./build/koebridge
+    else
+        ./build/koebridge
+    fi
 fi

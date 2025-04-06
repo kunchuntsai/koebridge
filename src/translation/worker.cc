@@ -1,75 +1,78 @@
-#include "worker.h"
+#include "translation/worker.h"
+#include <iostream>
+
+namespace koebridge {
+namespace translation {
 
 TranslationWorker::TranslationWorker(std::shared_ptr<ITranslationModel> model)
-    : model_(model), running_(true) {
+    : model_(model), running_(false) {
 }
 
 TranslationWorker::~TranslationWorker() {
     stop();
 }
 
-void TranslationWorker::addRequest(const std::string& text, const TranslationOptions& options, TranslationCallback callback) {
-    QMutexLocker locker(&mutex_);
-    TranslationRequest request;
-    request.text = text;
-    request.options = options;
-    request.callback = callback;
-    requestQueue_.enqueue(request);
-    condition_.wakeOne();
+void TranslationWorker::start() {
+    if (running_) {
+        return;
+    }
+    
+    running_ = true;
+    workerThread_ = std::thread(&TranslationWorker::processRequests, this);
 }
 
 void TranslationWorker::stop() {
-    QMutexLocker locker(&mutex_);
-    running_ = false;
-    condition_.wakeAll();
+    if (!running_) {
+        return;
+    }
+    
+    {
+        std::lock_guard<std::mutex> lock(queueMutex_);
+        running_ = false;
+    }
+    queueCondition_.notify_all();
+    
+    if (workerThread_.joinable()) {
+        workerThread_.join();
+    }
 }
 
-void TranslationWorker::process() {
+void TranslationWorker::addRequest(const std::string& text, const TranslationOptions& options, TranslationCallback callback) {
+    TranslationRequest request{text, options, callback};
+    
+    {
+        std::lock_guard<std::mutex> lock(queueMutex_);
+        requestQueue_.push(request);
+    }
+    queueCondition_.notify_one();
+}
+
+void TranslationWorker::processRequests() {
     while (true) {
         TranslationRequest request;
         
         {
-            QMutexLocker locker(&mutex_);
+            std::unique_lock<std::mutex> lock(queueMutex_);
+            queueCondition_.wait(lock, [this]() {
+                return !running_ || !requestQueue_.empty();
+            });
             
-            // Wait for a request if the queue is empty
-            while (running_ && requestQueue_.isEmpty()) {
-                condition_.wait(&mutex_);
-            }
-            
-            // Check if worker should stop
-            if (!running_ && requestQueue_.isEmpty()) {
+            if (!running_ && requestQueue_.empty()) {
                 break;
             }
             
-            // Get next request from queue
-            request = requestQueue_.dequeue();
+            if (!requestQueue_.empty()) {
+                request = requestQueue_.front();
+                requestQueue_.pop();
+            }
         }
         
-        // Process the translation request
-        try {
-            // Perform the translation
-            TranslationResult result = model_->translate(request.text, request.options);
-            
-            // Call the callback with the result
-            if (request.callback) {
-                request.callback(result);
-            }
-            
-            // Emit progress signal (100% complete)
-            emit translationProgress(100);
-        } catch (const std::exception& e) {
-            // Handle any exceptions during translation
-            TranslationResult errorResult;
-            errorResult.sourceText = request.text;
-            errorResult.success = false;
-            errorResult.errorMessage = std::string("Translation error: ") + e.what();
-            
-            // Call the callback with the error result
-            if (request.callback) {
-                request.callback(errorResult);
-            }
+        if (request.callback) {
+            auto result = model_->translate(request.text, request.options);
+            request.callback(result);
         }
     }
-    
-    emit finished();
 }
+
+} // namespace translation
+} // namespace koebridge

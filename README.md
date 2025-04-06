@@ -15,134 +15,112 @@ Real-time Japanese to English meeting translator using local LLMs. "Koe" means "
 
 ## Prerequisites
 
-Before building the project, ensure you have the following dependencies installed:
-
-### Required Dependencies
-
-1. CMake (3.16 or higher)
-2. C++17 compatible compiler
-3. Qt 6 with the following components:
+- macOS 10.15 or later
+- CMake 3.15 or later
+- C++17 compatible compiler
+- PortAudio 19.7.0+ (for audio capture)
+- SentencePiece
+- Qt 6 with the following components:
    - Core
    - Gui
    - Widgets
    - Concurrent
-4. PortAudio 19.7.0+ (for audio capture)
-5. Google Test 1.16.0+ (for running tests)
+- Google Test 1.16.0+
 
-### Installation on macOS
+## Installation
 
-Using Homebrew:
+1. Clone the repository:
 ```bash
-# Install build tools
-brew install cmake
-
-# Install Qt 6
-brew install qt@6
-
-# Install PortAudio
-brew install portaudio
-
-# Install Google Test
-brew install googletest
+git clone https://github.com/yourusername/koebridge.git
+cd koebridge
 ```
+
+2. Set up the development environment:
+```bash
+./scripts/local_setup.sh
+```
+
+This will:
+- Install required dependencies using Homebrew
+- Set up the build environment
+- Create necessary configuration files
+- Initialize submodules
 
 ## Building
 
-### Build Steps
-
-You can use the included build script:
-
+### Basic Build
 ```bash
-# Regular build
 ./scripts/build.sh
-
-# Clean build (removes previous build artifacts)
-./scripts/build.sh --clean
-
-# Show build options
-./scripts/build.sh --help
 ```
 
-### Running the Application
+### Build Options
+- `--debug`: Build with debug symbols
+- `--release`: Build in release mode (default)
+- `--tests`: Build with tests enabled
+- `--clean`: Clean build directory before building
 
-After building, you can run KoeBridge using the provided run script:
+Example:
+```bash
+# Clean build with debug symbols
+./scripts/build.sh --clean --debug
+
+# Build with tests enabled
+./scripts/build.sh --tests
+```
+
+## Testing
+
+KoeBridge includes a comprehensive test suite to ensure code quality and functionality.
+
+### Running Tests
 
 ```bash
-# Regular execution
+# Run all tests
+./scripts/run.sh --tests
+
+# Run specific test modules
+./scripts/run.sh --tests --audio     # Audio tests only
+./scripts/run.sh --tests --translation  # Translation tests only
+
+# Clean build and run tests
+./scripts/run.sh --tests --clean
+```
+
+For detailed information about the test suite, writing tests, and test structure, see the [Test Documentation](tests/unit/TEST_README.md).
+
+## Running the Application
+
+```bash
+# Run the application (builds if needed)
 ./scripts/run.sh
 
-# Run in debug mode with additional logging
+# Run in debug mode
 ./scripts/run.sh --debug
 
-# Show run options
-./scripts/run.sh --help
+# Force rebuild before running
+./scripts/run.sh --build
+
+# Clean build and run
+./scripts/run.sh --clean
 ```
-
-### Generating Documentation
-
-The project uses Doxygen for code documentation. You can generate the documentation using:
-
-```bash
-./scripts/doc-gen.sh
-```
-
-This will create HTML documentation in the `docs` directory. The documentation includes:
-- Detailed API documentation for all classes and interfaces
-- Class diagrams and call graphs
-- Project structure and architecture overview
-- Usage examples and implementation details
 
 ## Project Structure
 
-The project is organized into several modules:
-
-- `audio`: Audio capture and processing components
-- `stt`: Speech-to-text conversion using Whisper
-- `inference`: Core inference engine for model execution
-- `models`: Implementation of supported model types (GGML, etc.)
-- `translation`: Translation pipeline, model management and worker threads
-- `ui`: Qt-based user interface components
-- `utils`: Configuration, logging, and utility functions
-- `scripts`: Build and run helper scripts
-
-## Architecture
-
-KoeBridge uses a modular architecture with clear separation of concerns:
-
-- Audio capture → Speech recognition → Translation → UI display
-
-The translation component uses a local LLM optimized for Japanese-English translation, with multiple model options available based on quality/speed requirements.
-
-See the [design document](docs/design-doc.md) for detailed architecture information.
-
-## Interfaces
-
-Core interfaces are defined in the `include/interfaces` directory:
-- `i_model_manager.h`: Manages model discovery, loading and lifecycle
-- `i_translation_model.h`: Interface for different model implementations
-- `i_translation_service.h`: High-level translation service API
-
-## Troubleshooting
-
-If you encounter build errors:
-
-1. Make sure all dependencies are properly installed:
-   ```bash
-   # Check installed versions
-   brew list --versions cmake
-   brew list --versions qt@6
-   brew list --versions portaudio
-   brew list --versions googletest
-   ```
-
-2. Try running a clean build with `./scripts/build.sh --clean`
-3. Check that your development environment supports C++17
-4. Ensure all dependencies are correctly installed
-
-## Contributing
-
-Contributions are welcome! Please see our contributing guidelines for details.
+```
+koebridge/
+├── include/             # Public header files
+├── src/                 # Source files
+│   ├── audio/           # Audio capture and processing
+│   ├── translation/     # Translation service
+│   └── utils/           # Utility functions
+├── tests/               # Test files
+│   └── unit/            # Unit tests
+│       ├── audio/       # Audio-related tests
+│       └── translation/ # Translation-related tests
+├── third_party/         # Third-party dependencies
+└── scripts/             # Build and utility scripts
+```
 
 ## License
 
-[MIT License](LICENSE)
+This project is licensed under the MIT License - see the LICENSE file for details.

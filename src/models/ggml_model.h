@@ -5,15 +5,19 @@
 
 #pragma once
 
-#include <memory>
 #include <string>
+#include <memory>
+#include <future>
 #include <vector>
 #include <thread>
-#include "../../include/interfaces/i_translation_model.h"
-#include "../translation/data_structures.h"
+#include "inference/engine.h"
+#include "interfaces/i_translation_model.h"
+#include "translation/data_structures.h"
+
+namespace koebridge {
+namespace models {
 
 class ThreadPool;
-class InferenceEngine;
 
 /**
  * @class GGMLModel
@@ -23,18 +27,18 @@ class InferenceEngine;
  * specifically for GGML format models, handling model loading, inference, and
  * asynchronous translation operations.
  */
-class GGMLModel : public ITranslationModel {
+class GGMLModel : public translation::ITranslationModel {
 public:
     /**
      * @brief Constructor for GGMLModel
      * @param modelInfo Information about the model to load
      */
-    GGMLModel(const ModelInfo& modelInfo);
+    explicit GGMLModel(const translation::ModelInfo& modelInfo);
     
     /**
      * @brief Destructor for GGMLModel
      */
-    ~GGMLModel() override;
+    ~GGMLModel();
     
     /**
      * @brief Initialize the GGML model
@@ -54,7 +58,7 @@ public:
      * @param options Translation options and parameters
      * @return TranslationResult The translation result
      */
-    TranslationResult translate(const std::string& text, const TranslationOptions& options) override;
+    translation::TranslationResult translate(const std::string& text, const translation::TranslationOptions& options) override;
     
     /**
      * @brief Translate text asynchronously
@@ -62,26 +66,26 @@ public:
      * @param options Translation options and parameters
      * @return std::future<TranslationResult> Future containing the translation result
      */
-    std::future<TranslationResult> translateAsync(const std::string& text, const TranslationOptions& options) override;
+    std::future<translation::TranslationResult> translateAsync(const std::string& text, const translation::TranslationOptions& options) override;
     
     /**
      * @brief Get information about the loaded model
      * @return ModelInfo Information about the model
      */
-    ModelInfo getModelInfo() const override;
+    translation::ModelInfo getModelInfo() const override;
     
     /**
      * @brief Get statistics from the last inference operation
      * @return InferenceStats Statistics about the last translation operation
      */
-    InferenceStats getLastInferenceStats() const override;
+    translation::InferenceStats getLastInferenceStats() const override;
 
 private:
-    ModelInfo modelInfo_;                    ///< Information about the loaded model
+    translation::ModelInfo modelInfo_;                    ///< Information about the loaded model
     bool initialized_ = false;               ///< Model initialization flag
-    InferenceStats lastStats_;               ///< Statistics from last inference
+    translation::InferenceStats lastStats_;               ///< Statistics from last inference
     
-    std::unique_ptr<InferenceEngine> engine_; ///< Inference engine for model operations
+    std::unique_ptr<inference::InferenceEngine> engine_; ///< Inference engine for model operations
     std::shared_ptr<ThreadPool> threadPool_;  ///< Thread pool for async operations
     
     /**
@@ -104,5 +108,8 @@ private:
      * @param outputTokens Vector to store output token IDs
      * @param options Translation options for inference
      */
-    void runInference(const std::vector<int>& inputTokens, std::vector<int>& outputTokens, const TranslationOptions& options);
+    void runInference(const std::vector<int>& inputTokens, std::vector<int>& outputTokens, const translation::TranslationOptions& options);
 };
+
+} // namespace models
+} // namespace koebridge

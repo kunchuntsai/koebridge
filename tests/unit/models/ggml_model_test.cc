@@ -1,18 +1,17 @@
 #include <gtest/gtest.h>
 #include "../../../src/models/ggml_model.h"
-#include "../../../include/interfaces/i_translation_model.h"
 #include "../../../src/translation/data_structures.h"
+
+using namespace koebridge::models;
+using namespace koebridge::translation;
 
 class GGMLModelTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        // Create test model info
         modelInfo.id = "test_model";
-        modelInfo.name = "Test Model";
-        modelInfo.version = "1.0";
-        modelInfo.filePath = "./test_models/test_model.bin";
-        modelInfo.sizeBytes = 1024;
-        modelInfo.type = ModelType::GGML;
+        modelInfo.path = "./test_models/test_model.bin";
+        modelInfo.size = 1024;
+        modelInfo.lastModified = std::time(nullptr);
     }
 
     ModelInfo modelInfo;
@@ -67,4 +66,55 @@ TEST_F(GGMLModelTest, TestAsyncTranslation) {
     // auto result = future.get();
     // EXPECT_TRUE(result.success);
     // EXPECT_EQ(result.translatedText, "Good morning");
+}
+
+TEST_F(GGMLModelTest, Initialization) {
+    GGMLModel model(modelInfo);
+    EXPECT_FALSE(model.isLoaded());
+}
+
+TEST_F(GGMLModelTest, LoadModel) {
+    GGMLModel model(modelInfo);
+    
+    // Since we're using a non-existent model, loading should fail
+    EXPECT_FALSE(model.load());
+    EXPECT_FALSE(model.isLoaded());
+}
+
+TEST_F(GGMLModelTest, TranslateText) {
+    GGMLModel model(modelInfo);
+    
+    TranslationOptions options;
+    options.temperature = 0.7f;
+    options.maxLength = 1024;
+    
+    std::string output;
+    EXPECT_FALSE(model.translate("こんにちは世界", output, options));
+    EXPECT_TRUE(output.empty());
+}
+
+TEST_F(GGMLModelTest, GetMetadata) {
+    GGMLModel model(modelInfo);
+    
+    auto metadata = model.getMetadata();
+    EXPECT_EQ(metadata.id, modelInfo.id);
+    EXPECT_EQ(metadata.path, modelInfo.path);
+    EXPECT_EQ(metadata.size, modelInfo.size);
+}
+
+TEST_F(GGMLModelTest, GetStatistics) {
+    GGMLModel model(modelInfo);
+    
+    TranslationOptions options;
+    std::string output;
+    
+    // Attempt a translation (which will fail)
+    model.translate("こんにちは世界", output, options);
+    
+    // Check stats (should be zeros since translation failed)
+    auto stats = model.getStatistics();
+    EXPECT_EQ(stats.totalTimeMs, 0.0);
+    EXPECT_EQ(stats.inferenceTimeMs, 0.0);
+    EXPECT_EQ(stats.inputTokenCount, 0);
+    EXPECT_EQ(stats.outputTokenCount, 0);
 }

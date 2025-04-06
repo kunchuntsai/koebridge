@@ -1,128 +1,101 @@
-cmake_minimum_required(VERSION 3.16)
-project(koebridge VERSION 0.1.0 LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.15)
+project(koebridge VERSION 1.0.0 LANGUAGES CXX)
 
+# Add custom module path
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+
+# Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Enable Qt Meta-Object Compiler
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
-set(CMAKE_AUTOUIC ON)
+# Build type
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build." FORCE)
+endif()
+
+# Build tests option
+option(BUILD_TESTS "Build test executables" ON)
+
+# GGML options
+option(GGML_METAL "Enable GGML Metal backend" OFF)
+option(GGML_USE_METAL "Use Metal for GGML operations" OFF)
 
 # Find required packages
-find_package(Qt6 REQUIRED COMPONENTS
-    Core
-    Gui
-    Widgets
-    Concurrent
-)
+find_package(Threads REQUIRED)
+find_package(OpenGL REQUIRED)
+find_package(GTest REQUIRED)
+find_package(PortAudio REQUIRED)
+find_package(SentencePiece REQUIRED)
+find_package(Qt6 COMPONENTS Core Widgets Concurrent REQUIRED)
 
-# Find PortAudio using pkg-config
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(PORTAUDIO REQUIRED portaudio-2.0)
-
-# Find GTest using pkg-config
-pkg_check_modules(GTEST REQUIRED gtest_main)
-
-# Include directories for all targets
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)  # Add src to include path
-include_directories(${PORTAUDIO_INCLUDE_DIRS})
-include_directories(${GTEST_INCLUDE_DIRS})
-link_directories(${PORTAUDIO_LIBRARY_DIRS})
-link_directories(${GTEST_LIBRARY_DIRS})
+# Add GGML as a subdirectory
+add_subdirectory(third_party/ggml)
 
 # Add source files
-file(GLOB_RECURSE EXISTING_SOURCES "src/*.cc")
-file(GLOB_RECURSE HEADERS "include/*.h" "src/*.h")
-
-# Add new source directories from update
-set(AUDIO_SOURCES
+set(SOURCES
+    src/main.cc
     src/audio/audio_capture.cc
-    src/audio/audio_processor.cc
+    src/translation/translation_service.cc
+    src/translation/model_manager.cc
+    src/translation/translator.cc
+    src/translation/worker.cc
+    src/utils/config.cc
+    src/utils/logger.cc
 )
 
-set(INFERENCE_SOURCES
-    src/inference/engine.cc
-)
-
-set(MODELS_SOURCES
-    src/models/ggml_model.cc
-)
-
-# Create library target for core functionality
-add_library(koebridge_lib STATIC
-    ${EXISTING_SOURCES}
-    ${AUDIO_SOURCES}
-    ${INFERENCE_SOURCES}
-    ${MODELS_SOURCES}
-    ${HEADERS}
-)
-
-# Set include directories for the library
-target_include_directories(koebridge_lib PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/interfaces
-)
-
-# Link libraries for the core library
-target_link_libraries(koebridge_lib PUBLIC
-    Qt6::Core
-    Qt6::Gui
-    Qt6::Widgets
-    Qt6::Concurrent
-    ${PORTAUDIO_LIBRARIES}
-    ${GTEST_LIBRARIES}
+# Add header files
+set(HEADERS
+    src/audio/audio_capture.h
+    src/translation/translation_service.h
+    src/translation/model_manager.h
+    src/translation/translator.h
+    src/translation/worker.h
+    src/translation/data_structures.h
+    src/utils/config.h
+    src/utils/logger.h
 )
 
 # Create main executable
-add_executable(${PROJECT_NAME} 
-    src/main.cc
+add_executable(koebridge ${SOURCES} ${HEADERS})
+
+# Set Qt MOC properties
+set_target_properties(koebridge PROPERTIES
+    AUTOMOC ON
+    AUTORCC ON
+    AUTOUIC ON
 )
 
-# Link main executable with the library
-target_link_libraries(${PROJECT_NAME} PRIVATE
-    koebridge_lib
+# Link libraries
+target_link_libraries(koebridge PRIVATE
+    Qt6::Core
+    Qt6::Widgets
+    Qt6::Concurrent
+    ${PortAudio_LIBRARIES}
+    ${SENTENCEPIECE_LIBRARIES}
+    GTest::gtest
+    Threads::Threads
+    OpenGL::GL
+    ggml
 )
 
-# Tests configuration (if testing is enabled)
-option(BUILD_TESTS "Build tests" OFF)
+# Include directories
+target_include_directories(koebridge PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${PortAudio_INCLUDE_DIRS}
+    ${SENTENCEPIECE_INCLUDE_DIRS}
+)
+
+# Add tests if enabled
 if(BUILD_TESTS)
     enable_testing()
-    
-    # Unit tests
-    add_executable(unit_tests
-        tests/unit/translation/model_manager_test.cc
-        tests/unit/models/ggml_model_test.cc
-        tests/unit/audio/audio_capture_test.cc
-        # Add other unit tests
-    )
-    
-    target_link_libraries(unit_tests
-        ${GTEST_LIBRARIES}
-        ${GTEST_MAIN_LIBRARIES}
-        koebridge_lib
-        ${PORTAUDIO_LIBRARIES}
-    )
-    
-    # Integration tests
-    add_executable(integration_tests
-        tests/integration/end_to_end/translation_test.cc
-        # Add other integration tests
-    )
-    
-    target_link_libraries(integration_tests
-        ${GTEST_LIBRARIES}
-        ${GTEST_MAIN_LIBRARIES}
-        koebridge_lib
-        ${PORTAUDIO_LIBRARIES}
-    )
-    
-    add_test(NAME UnitTests COMMAND unit_tests)
-    add_test(NAME IntegrationTests COMMAND integration_tests)
+    add_subdirectory(tests)
 endif()
 
-# Install target
-install(TARGETS ${PROJECT_NAME} DESTINATION bin)
-install(TARGETS koebridge_lib DESTINATION lib)
+# Installation
+install(TARGETS koebridge
+    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+)

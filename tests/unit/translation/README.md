@@ -44,7 +44,7 @@ The `ModelManager` class tests cover the following aspects:
 You can run the translation tests using:
 
 ```bash
-./scripts/test.sh --translation
+./scripts/run.sh --tests --translation
 ```
 
 ## Test Structure

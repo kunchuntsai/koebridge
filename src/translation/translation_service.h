@@ -6,12 +6,19 @@
 #pragma once
 
 #include <memory>
+#include <string>
+#include <functional>
 #include <QObject>
-#include <QThread>
-#include <QFuture>
-#include <QFutureWatcher>
+#include <QString>
+#include "data_structures.h"
 #include "interfaces/i_translation_service.h"
-#include "translation/model_manager.h"
+#include "interfaces/i_model_manager.h"
+
+namespace koebridge {
+namespace translation {
+
+// Define the callback type for async translation
+using TranslationCallback = std::function<void(const TranslationResult&)>;
 
 /**
  * @class TranslationService
@@ -28,7 +35,7 @@ public:
      * @brief Constructor
      * @param modelManager Shared pointer to the model manager
      */
-    explicit TranslationService(std::shared_ptr<ModelManager> modelManager);
+    explicit TranslationService(std::shared_ptr<IModelManager> modelManager);
 
     /**
      * @brief Destructor
@@ -37,31 +44,37 @@ public:
 
     // ITranslationService interface implementation
     bool initialize() override;
-    void shutdown() override;
-    std::string translateText(const std::string& japaneseText) override;
-    void translateTextAsync(const std::string& japaneseText, TranslationCallback callback) override;
-    void setTranslationOptions(const TranslationOptions& options) override;
-    TranslationOptions getTranslationOptions() const override;
+    bool translate(const std::string& input, std::string& output) override;
+    void setOptions(const TranslationOptions& options) override;
+    TranslationOptions getOptions() const override;
+    bool isInitialized() const override;
+    
+    // Additional methods not in the interface
+    void shutdown();
+    std::string translateText(const std::string& japaneseText);
+    void translateTextAsync(const std::string& japaneseText, TranslationCallback callback);
+    void setTranslationOptions(const TranslationOptions& options);
+    TranslationOptions getTranslationOptions() const;
 
 signals:
     /**
      * @brief Signal emitted when translation is complete
-     * @param result The translation result
+     * @param input The input text
+     * @param output The translated text
      */
-    void translationComplete(const TranslationResult& result);
+    void translationComplete(const QString& input, const QString& output);
 
     /**
      * @brief Signal emitted when translation fails
-     * @param errorMessage The error message
+     * @param message The error message
      */
-    void translationError(const std::string& errorMessage);
+    void error(const QString& message);
 
-private slots:
     /**
-     * @brief Slot to handle async translation completion
-     * @param result The translation result
+     * @brief Signal emitted when progress is updated
+     * @param progress The progress percentage
      */
-    void handleAsyncTranslationComplete(const TranslationResult& result);
+    void progressUpdated(int progress);
 
 private:
     /**
@@ -71,8 +84,14 @@ private:
      */
     TranslationResult translateInternal(const std::string& japaneseText);
 
-    std::shared_ptr<ModelManager> modelManager_;  ///< Model manager instance
+    bool validateInput(const std::string& input) const;
+    void handleTranslationError(const std::string& message);
+    void updateProgress(int progress);
+
+    std::shared_ptr<IModelManager> modelManager_;  ///< Model manager instance
     TranslationOptions options_;                  ///< Current translation options
-    QThread workerThread_;                        ///< Thread for async operations
     bool initialized_;                            ///< Initialization state
-}; 
+};
+
+} // namespace translation
+} // namespace koebridge 

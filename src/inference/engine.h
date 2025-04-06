@@ -9,6 +9,16 @@
 #include <vector>
 #include <memory>
 #include "translation/data_structures.h"
+#include "utils/config.h"
+
+namespace koebridge {
+namespace inference {
+
+struct InferenceStats {
+    double inferenceTimeMs;
+    size_t tokensProcessed;
+    size_t memoryUsed;
+};
 
 /**
  * @class InferenceEngine
@@ -32,10 +42,17 @@ public:
     /**
      * @brief Initialize the inference engine with a model
      * @param modelPath Path to the model file
-     * @param config Configuration parameters for the model
      * @return bool True if initialization was successful, false otherwise
      */
-    bool initialize(const std::string& modelPath, const std::map<std::string, std::string>& config);
+    bool initialize(const std::string& modelPath);
+    
+    /**
+     * @brief Process input text and generate output text
+     * @param input Input text to process
+     * @param output Output text generated from the input
+     * @return bool True if processing was successful, false otherwise
+     */
+    bool processInput(const std::string& input, std::string& output);
     
     /**
      * @brief Check if the engine is initialized
@@ -51,9 +68,9 @@ public:
      * @return std::vector<int> Vector of output token IDs
      */
     std::vector<int> runInference(
-        const std::vector<int>& inputTokens, 
-        const TranslationOptions& options, 
-        InferenceStats& stats
+        const std::vector<int>& inputTokens,
+        const translation::TranslationOptions& options,
+        translation::InferenceStats& stats
     );
     
     /**
@@ -73,5 +90,7 @@ public:
 private:
     class Impl;
     std::unique_ptr<Impl> pImpl_;
-    bool initialized_ = false;
 };
+
+} // namespace inference
+} // namespace koebridge
