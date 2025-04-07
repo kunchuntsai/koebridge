@@ -49,6 +49,12 @@ public:
         }
         
         // TODO: Implement proper model loading
+        // - Read model header and validate
+        // - Load model weights into appropriate tensors
+        // - Set up model architecture based on header
+        // - Initialize tokenizer with vocabulary
+        // - Set up memory mapping for large models
+        
         // For now, just mark as initialized
         initialized_ = true;
         return true;
@@ -61,6 +67,11 @@ public:
         }
         
         try {
+            // TODO: Implement complete input processing pipeline
+            // - Preprocess input text (normalize, etc.)
+            // - Split into sentences/chunks if needed
+            // - Handle context window constraints
+            
             // Create input tensor
             auto inputTensor = ggml_new_tensor_1d(ctx_, GGML_TYPE_F32, input.length());
             float* inputData = (float*)ggml_get_data(inputTensor);
@@ -89,6 +100,9 @@ public:
     void cleanup() {
         if (model_) {
             // TODO: Implement proper model cleanup
+            // - Free model weights and tensors
+            // - Unmap memory-mapped files
+            // - Release GPU resources if used
             model_ = nullptr;
         }
         if (ctx_) {
@@ -123,6 +137,12 @@ public:
         float* maskData = (float*)ggml_get_data(attentionMask);
         std::fill(maskData, maskData + inputTokens.size() * inputTokens.size(), 1.0f);
         
+        // TODO: Implement actual inference logic
+        // - Build GGML computation graph
+        // - Apply transformer model operations
+        // - Handle beam search or sampling for generation
+        // - Optimize memory usage during computation
+        
         // Run transformer layers
         auto hiddenStates = runTransformerLayers(inputTensor, attentionMask);
         
@@ -139,6 +159,11 @@ public:
         if (!initialized_) {
             throw std::runtime_error("Inference engine not initialized");
         }
+        
+        // TODO: Implement proper tokenization using SentencePiece or appropriate tokenizer
+        // - Load vocabulary from model
+        // - Apply BPE or SentencePiece tokenization
+        // - Handle special tokens correctly
         
         std::vector<int> tokens;
         
@@ -160,6 +185,11 @@ public:
         if (!initialized_) {
             throw std::runtime_error("Inference engine not initialized");
         }
+        
+        // TODO: Implement proper detokenization
+        // - Convert token IDs back to subwords using vocabulary
+        // - Handle merging of BPE or SentencePiece tokens
+        // - Apply post-processing for spaces and punctuation
         
         // Remove special tokens
         std::vector<int> textTokens;
@@ -188,13 +218,21 @@ private:
     
     ggml_tensor* runTransformerLayers(ggml_tensor* input, ggml_tensor* attentionMask) {
         // TODO: Implement transformer layers
-        // This should run the actual model inference through the transformer layers
+        // - Apply embedding layer
+        // - Run through each transformer layer
+        // - Apply self-attention and feed-forward operations
+        // - Apply layer normalization
+        // - Return final hidden states
         return input;
     }
     
     std::vector<int> generateTokens(ggml_tensor* hiddenStates, const translation::TranslationOptions& options) {
         // TODO: Implement token generation
-        // This should generate output tokens based on the hidden states
+        // - Apply language model head to get logits
+        // - Apply temperature and sampling
+        // - For beam search, track multiple hypotheses
+        // - Generate until EOS token or max length
+        // - Handle repetition penalty and other constraints
         return std::vector<int>();
     }
 };

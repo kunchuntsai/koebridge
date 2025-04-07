@@ -10,6 +10,7 @@ GGMLModel::GGMLModel(const translation::ModelInfo& modelInfo)
     : modelInfo_(modelInfo),
       engine_(std::make_unique<inference::InferenceEngine>()),
       initialized_(false) {
+    // TODO: Implement proper initialization of GGML model with appropriate parameters
 }
 
 GGMLModel::~GGMLModel() {
@@ -21,6 +22,8 @@ bool GGMLModel::initialize() {
         return true;
     }
     
+    // TODO: Implement complete GGML model initialization with tokenizer setup
+    // and memory optimization for the targeted device (CPU/GPU)
     initialized_ = engine_->initialize(modelInfo_.path);
     
     if (initialized_) {
@@ -47,6 +50,11 @@ translation::TranslationResult GGMLModel::translate(const std::string& text, con
     }
     
     try {
+        // TODO: Implement actual translation with GGML, including:
+        // - Tokenization with SentencePiece or appropriate tokenizer
+        // - Proper tensor memory management 
+        // - Inference with the specified translation options (beam size, etc)
+        // - Memory-efficient implementation for large models
         std::string output;
         if (engine_->processInput(text, output)) {
             result.text = output;
@@ -67,6 +75,7 @@ std::future<translation::TranslationResult> GGMLModel::translateAsync(
     const std::string& text,
     const translation::TranslationOptions& options
 ) {
+    // TODO: Implement proper async execution with thread pool for better resource management
     return std::async(std::launch::async, [this, text, options]() {
         return translate(text, options);
     });
@@ -77,6 +86,7 @@ translation::ModelInfo GGMLModel::getModelInfo() const {
 }
 
 translation::InferenceStats GGMLModel::getLastInferenceStats() const {
+    // TODO: Implement actual inference statistics collection
     return lastStats_;
 }
 

@@ -40,6 +40,11 @@ set(SOURCES
     src/translation/model_manager.cc
     src/translation/translator.cc
     src/translation/worker.cc
+    src/models/ggml_model.cc
+    src/inference/engine.cc
+    src/llm/llm_model.cc
+    src/llm/llm_manager.cc
+    src/llm/nllb_model.cc
     src/utils/config.cc
     src/utils/logger.cc
 )
@@ -52,6 +57,11 @@ set(HEADERS
     src/translation/translator.h
     src/translation/worker.h
     src/translation/data_structures.h
+    src/models/ggml_model.h
+    src/inference/engine.h
+    src/llm/llm_model.h
+    src/llm/llm_manager.h
+    src/llm/nllb_model.h
     src/utils/config.h
     src/utils/logger.h
 )

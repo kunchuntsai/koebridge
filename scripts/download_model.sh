@@ -1,88 +1,103 @@
 #!/bin/bash
 
-# Function to display usage information
-show_usage() {
-    echo "Usage: $0 [OPTIONS] MODEL_ID"
-    echo "Download a translation model for KoeBridge"
-    echo ""
-    echo "Options:"
-    echo "  -h, --help     Display this help message"
-    echo "  -l, --list     List available models"
-    echo "  -p, --path     Specify model download path (default: ./_dataset/models)"
-    echo "  -v, --version  Specify model version (default: latest)"
-    echo ""
-    echo "Example:"
-    echo "  $0 -p /path/to/models nllb-ja-en"
-    echo "  $0 --version 1.0.0 nllb-ja-en"
-}
-
 # Default values
-MODEL_PATH="../_dataset/models"
-MODEL_VERSION="latest"
+model_path="../_dataset/models"
+model_version="1.0"
+
+# Function to display usage information
+usage() {
+    echo "Usage: $0 [OPTIONS] MODEL_ID"
+    echo
+    echo "Download a translation model for KoeBridge."
+    echo
+    echo "Options:"
+    echo "  -h, --help                  Display this help message"
+    echo "  -l, --list                  List available models"
+    echo "  -p, --path PATH             Specify model download path (default: $model_path)"
+    echo "  -v, --version VERSION       Specify model version (default: $model_version)"
+    echo
+    echo "Available models:"
+    echo "  nllb-ja-en     NLLB-200 Distilled 600M model optimized for Japanese to English"
+    echo "  nllb-en-ja     NLLB-200 Distilled 600M model optimized for English to Japanese"
+    echo "  nllb-zh-en     NLLB-200 Distilled 600M model optimized for Chinese to English"
+    echo "  nllb-en-zh     NLLB-200 Distilled 600M model optimized for English to Chinese"
+    echo "  nllb-multi     NLLB-200 Distilled 600M model with support for multiple languages"
+    echo
+    exit 1
+}
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -h|--help)
-            show_usage
-            exit 0
+            usage
             ;;
         -l|--list)
             echo "Available models:"
-            echo "  nllb-ja-en - NLLB-200 Distilled 600M (Japanese to English)"
-            echo "    - Optimized for Apple Silicon"
-            echo "    - Quantized for efficient inference"
-            echo "    - Size: ~1.2GB"
+            echo "  nllb-ja-en     NLLB-200 Distilled 600M model optimized for Japanese to English"
+            echo "  nllb-en-ja     NLLB-200 Distilled 600M model optimized for English to Japanese"
+            echo "  nllb-zh-en     NLLB-200 Distilled 600M model optimized for Chinese to English"
+            echo "  nllb-en-zh     NLLB-200 Distilled 600M model optimized for English to Chinese"
+            echo "  nllb-multi     NLLB-200 Distilled 600M model with support for multiple languages"
             exit 0
             ;;
         -p|--path)
-            MODEL_PATH="$2"
+            model_path="$2"
             shift 2
             ;;
         -v|--version)
-            MODEL_VERSION="$2"
+            model_version="$2"
             shift 2
             ;;
         *)
-            MODEL_ID="$1"
+            model_id="$1"
             shift
             ;;
     esac
 done
 
 # Check if model ID is provided
-if [ -z "$MODEL_ID" ]; then
-    echo "Error: Model ID is required"
-    show_usage
-    exit 1
+if [ -z "$model_id" ]; then
+    echo "Error: No model ID specified."
+    usage
 fi
 
 # Create model directory if it doesn't exist
-mkdir -p "$MODEL_PATH"
+mkdir -p "$model_path"
 
-# Download model based on ID
-case "$MODEL_ID" in
-    "nllb-ja-en")
-        echo "Downloading NLLB-200 Distilled 600M (Japanese to English) model..."
-        MODEL_URL="https://huggingface.co/TheBloke/NLLB-200-Distilled-600M-GGML/resolve/main/nllb-200-distilled-600m-ja-en-q4_K_M.bin"
-        MODEL_FILE="nllb-200-distilled-600m-ja-en.bin"
+# Download the model
+case "$model_id" in
+    nllb-ja-en)
+        echo "Downloading NLLB-200 Distilled 600M model (Japanese to English)..."
+        curl -L "https://huggingface.co/TheBloke/nllb-200-distilled-600M-GGML/resolve/main/nllb-200-distilled-600M.q4_0.bin" -o "$model_path/nllb-ja-en.bin"
+        ;;
+    nllb-en-ja)
+        echo "Downloading NLLB-200 Distilled 600M model (English to Japanese)..."
+        curl -L "https://huggingface.co/TheBloke/nllb-200-distilled-600M-GGML/resolve/main/nllb-200-distilled-600M.q4_0.bin" -o "$model_path/nllb-en-ja.bin"
+        ;;
+    nllb-zh-en)
+        echo "Downloading NLLB-200 Distilled 600M model (Chinese to English)..."
+        curl -L "https://huggingface.co/TheBloke/nllb-200-distilled-600M-GGML/resolve/main/nllb-200-distilled-600M.q4_0.bin" -o "$model_path/nllb-zh-en.bin"
+        ;;
+    nllb-en-zh)
+        echo "Downloading NLLB-200 Distilled 600M model (English to Chinese)..."
+        curl -L "https://huggingface.co/TheBloke/nllb-200-distilled-600M-GGML/resolve/main/nllb-200-distilled-600M.q4_0.bin" -o "$model_path/nllb-en-zh.bin"
+        ;;
+    nllb-multi)
+        echo "Downloading NLLB-200 Distilled 600M model (Multilingual)..."
+        curl -L "https://huggingface.co/TheBloke/nllb-200-distilled-600M-GGML/resolve/main/nllb-200-distilled-600M.q4_0.bin" -o "$model_path/nllb-multi.bin"
         ;;
     *)
-        echo "Error: Unknown model ID: $MODEL_ID"
-        echo "Use --list to see available models"
-        exit 1
+        echo "Error: Unknown model ID: $model_id"
+        usage
         ;;
 esac
 
-# Download the model
-echo "Downloading to: $MODEL_PATH/$MODEL_FILE"
-curl -L "$MODEL_URL" -o "$MODEL_PATH/$MODEL_FILE"
-
 # Check if download was successful
 if [ $? -eq 0 ]; then
-    echo "Download completed successfully!"
-    echo "Model saved to: $MODEL_PATH/$MODEL_FILE"
+    echo "Model downloaded successfully to $model_path/$model_id.bin"
+    echo "You can now use this model with KoeBridge."
 else
-    echo "Error: Failed to download model"
+    echo "Error: Failed to download model."
     exit 1
 fi 

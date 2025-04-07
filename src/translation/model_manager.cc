@@ -109,8 +109,7 @@ std::shared_ptr<ITranslationModel> ModelManager::getTranslationModel() {
 }
 
 std::string ModelManager::getModelPathFromConfig() const {
-    // Try to get path from config
-    // TODO: Use actual config service
+    // TODO: Use actual config service instead of hardcoded paths
     
     // If not specified, use default location
     QString dataPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
@@ -139,16 +138,50 @@ void ModelManager::scanForModels() {
     std::cerr << "Found " << entries.size() << " files in model directory" << std::endl;
     
     for (const auto& entry : entries) {
-        // Filter for model files (simple check for now)
-        if (entry.suffix() == "bin" || entry.suffix() == "ggml") {
+        // Filter for model files
+        if (entry.suffix() == "bin" || entry.suffix() == "ggml" || entry.suffix() == "gguf") {
             ModelInfo info;
             info.id = entry.baseName().toStdString();
             info.path = entry.filePath().toStdString();
             info.size = entry.size();
             info.lastModified = static_cast<std::time_t>(entry.lastModified().toSecsSinceEpoch());
             
+            // Set model capabilities based on file name
+            if (info.id.find("nllb") != std::string::npos) {
+                info.capabilities.push_back("translation");
+                info.modelType = "nllb";
+                info.description = "NLLB-200 model for multilingual translation";
+                
+                // Detect language pair from filename (e.g., nllb-ja-en for Japanese to English)
+                size_t langPos = info.id.find("-", info.id.find("nllb") + 4);
+                if (langPos != std::string::npos) {
+                    std::string langs = info.id.substr(langPos + 1);
+                    size_t sepPos = langs.find("-");
+                    if (sepPos != std::string::npos) {
+                        std::string srcLang = langs.substr(0, sepPos);
+                        std::string tgtLang = langs.substr(sepPos + 1);
+                        
+                        // Map short language codes to NLLB language codes
+                        if (srcLang == "ja") info.sourceLanguage = "jpn_Jpan";
+                        else if (srcLang == "en") info.sourceLanguage = "eng_Latn";
+                        else if (srcLang == "zh") info.sourceLanguage = "zho_Hans";
+                        else info.sourceLanguage = srcLang;
+                        
+                        if (tgtLang == "ja") info.targetLanguage = "jpn_Jpan";
+                        else if (tgtLang == "en") info.targetLanguage = "eng_Latn";
+                        else if (tgtLang == "zh") info.targetLanguage = "zho_Hans";
+                        else info.targetLanguage = tgtLang;
+                    }
+                }
+            } else {
+                // Generic model capabilities for other model types
+                info.capabilities.push_back("text-generation");
+                info.modelType = "general";
+            }
+            
             models_.push_back(info);
-            std::cerr << "Added model: " << info.id << " at " << info.path << std::endl;
+            std::cerr << "Added model: " << info.id << " at " << info.path 
+                      << " (Type: " << info.modelType << ")" << std::endl;
         }
     }
     

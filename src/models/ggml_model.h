@@ -80,14 +80,7 @@ public:
      */
     translation::InferenceStats getLastInferenceStats() const override;
 
-private:
-    translation::ModelInfo modelInfo_;                    ///< Information about the loaded model
-    bool initialized_ = false;               ///< Model initialization flag
-    translation::InferenceStats lastStats_;               ///< Statistics from last inference
-    
-    std::unique_ptr<inference::InferenceEngine> engine_; ///< Inference engine for model operations
-    std::shared_ptr<ThreadPool> threadPool_;  ///< Thread pool for async operations
-    
+protected:
     /**
      * @brief Convert text to token IDs
      * @param text Input text to tokenize
@@ -109,6 +102,14 @@ private:
      * @param options Translation options for inference
      */
     void runInference(const std::vector<int>& inputTokens, std::vector<int>& outputTokens, const translation::TranslationOptions& options);
+
+private:
+    translation::ModelInfo modelInfo_;                    ///< Information about the loaded model
+    bool initialized_ = false;               ///< Model initialization flag
+    translation::InferenceStats lastStats_;               ///< Statistics from last inference
+    
+    std::unique_ptr<inference::InferenceEngine> engine_; ///< Inference engine for model operations
+    std::shared_ptr<ThreadPool> threadPool_;  ///< Thread pool for async operations
 };
 
 } // namespace models

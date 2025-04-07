@@ -29,6 +29,27 @@ if(BUILD_TESTS)
         ${CMAKE_SOURCE_DIR}/src/utils/config.cc
     )
     
+    add_executable(llm_model_test
+        unit/llm/llm_model_test.cc
+        ${CMAKE_SOURCE_DIR}/src/llm/llm_model.cc
+        ${CMAKE_SOURCE_DIR}/src/models/ggml_model.cc
+        ${CMAKE_SOURCE_DIR}/src/inference/engine.cc
+        ${CMAKE_SOURCE_DIR}/src/utils/logger.cc
+        ${CMAKE_SOURCE_DIR}/src/utils/config.cc
+    )
+    
+    add_executable(llm_manager_test
+        unit/llm/llm_manager_test.cc
+        ${CMAKE_SOURCE_DIR}/src/llm/llm_manager.cc
+        ${CMAKE_SOURCE_DIR}/src/llm/llm_model.cc
+        ${CMAKE_SOURCE_DIR}/src/llm/nllb_model.cc
+        ${CMAKE_SOURCE_DIR}/src/models/ggml_model.cc
+        ${CMAKE_SOURCE_DIR}/src/inference/engine.cc
+        ${CMAKE_SOURCE_DIR}/src/translation/model_manager.cc
+        ${CMAKE_SOURCE_DIR}/src/utils/logger.cc
+        ${CMAKE_SOURCE_DIR}/src/utils/config.cc
+    )
+    
     # Temporarily disable ggml_model_test due to interface mismatch
     # add_executable(ggml_model_test
     #     unit/models/ggml_model_test.cc
@@ -41,6 +62,8 @@ if(BUILD_TESTS)
     set_target_properties(audio_capture_test PROPERTIES AUTOMOC ON)
     set_target_properties(translation_service_test PROPERTIES AUTOMOC ON)
     set_target_properties(model_manager_test PROPERTIES AUTOMOC ON)
+    set_target_properties(llm_model_test PROPERTIES AUTOMOC ON)
+    set_target_properties(llm_manager_test PROPERTIES AUTOMOC ON)
     # set_target_properties(ggml_model_test PROPERTIES AUTOMOC ON)
     
     # Link test executables
@@ -66,6 +89,26 @@ if(BUILD_TESTS)
     target_link_libraries(model_manager_test PRIVATE
         Qt6::Core
         Qt6::Widgets
+        ${SENTENCEPIECE_LIBRARIES}
+        GTest::gtest
+        GTest::gtest_main
+        ggml
+    )
+    
+    target_link_libraries(llm_model_test PRIVATE
+        Qt6::Core
+        Qt6::Widgets
+        Qt6::Concurrent
+        ${SENTENCEPIECE_LIBRARIES}
+        GTest::gtest
+        GTest::gtest_main
+        ggml
+    )
+    
+    target_link_libraries(llm_manager_test PRIVATE
+        Qt6::Core
+        Qt6::Widgets
+        Qt6::Concurrent
         ${SENTENCEPIECE_LIBRARIES}
         GTest::gtest
         GTest::gtest_main
@@ -100,6 +143,18 @@ if(BUILD_TESTS)
         ${SENTENCEPIECE_INCLUDE_DIRS}
     )
     
+    target_include_directories(llm_model_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/include
+        ${SENTENCEPIECE_INCLUDE_DIRS}
+    )
+    
+    target_include_directories(llm_manager_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/include
+        ${SENTENCEPIECE_INCLUDE_DIRS}
+    )
+    
     # target_include_directories(ggml_model_test PRIVATE
     #     ${CMAKE_SOURCE_DIR}/src
     #     ${CMAKE_SOURCE_DIR}/include
@@ -110,5 +165,7 @@ if(BUILD_TESTS)
     add_test(NAME AudioCaptureTest COMMAND audio_capture_test)
     add_test(NAME TranslationServiceTest COMMAND translation_service_test)
     add_test(NAME ModelManagerTest COMMAND model_manager_test)
+    add_test(NAME LLMModelTest COMMAND llm_model_test)
+    add_test(NAME LLMManagerTest COMMAND llm_manager_test)
     # add_test(NAME GgmlModelTest COMMAND ggml_model_test)
 endif() 

@@ -35,6 +35,11 @@ struct ModelInfo {
     std::string path;                  ///< Path to the model file
     size_t size;                       ///< Size of the model file in bytes
     std::time_t lastModified;          ///< Last modification time
+    std::vector<std::string> capabilities; ///< Model capabilities (e.g., "translation", "text-generation")
+    std::string modelType;             ///< Type of model (e.g., "nllb", "general")
+    std::string description;           ///< Human-readable description of the model
+    std::string sourceLanguage;        ///< Source language code (for translation models)
+    std::string targetLanguage;        ///< Target language code (for translation models)
 };
 
 /**

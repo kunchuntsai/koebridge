@@ -89,7 +89,7 @@ To download the model:
 ./scripts/download_model.sh nllb-ja-en
 ```
 
-The model will be downloaded to `./_dataset/models/` by default. You can specify a different path using the `-p` option:
+The model will be downloaded to `../_dataset/models/` by default. You can specify a different path using the `-p` option:
 
 ```bash
 ./scripts/download_model.sh -p /path/to/models nllb-ja-en
@@ -98,11 +98,27 @@ The model will be downloaded to `./_dataset/models/` by default. You can specify
 ### Available Models
 
 - `nllb-ja-en`: NLLB-200 Distilled 600M (Japanese to English)
-  - Optimized for Apple Silicon
+  - Optimized for efficient translation from Japanese to English
   - Quantized for efficient inference
   - Size: ~1.2GB
 
-The model will be automatically detected by the application when you run it. You can change the model path in the settings dialog if needed.
+- `nllb-en-ja`: NLLB-200 Distilled 600M (English to Japanese)
+  - Optimized for efficient translation from English to Japanese
+  - Same model architecture as nllb-ja-en, but configured for the reverse direction
+
+- `nllb-zh-en`: NLLB-200 Distilled 600M (Chinese to English)
+  - Optimized for efficient translation from Chinese to English
+
+- `nllb-en-zh`: NLLB-200 Distilled 600M (English to Chinese)
+  - Optimized for efficient translation from English to Chinese
+
+- `nllb-multi`: NLLB-200 Distilled 600M (Multilingual)
+  - Supports translation between multiple languages
+  - Configure source and target languages in config/config.ini
+
+All models are optimized for Apple Silicon and quantized for efficient inference.
+
+The model will be automatically detected by the application when you run it. You can change the model path and language settings in the config.ini file.
 
 ## Testing
 
