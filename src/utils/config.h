@@ -11,6 +11,9 @@
 
 namespace fs = std::filesystem;
 
+namespace koebridge {
+namespace utils {
+
 /**
  * @class Config
  * @brief Singleton configuration manager for application settings
@@ -140,3 +143,6 @@ private:
 
     std::map<std::string, std::string> configData; ///< Storage for configuration key-value pairs
 };
+
+} // namespace utils
+} // namespace koebridge

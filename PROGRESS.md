@@ -1,7 +1,7 @@
 ## Implementation Order and Status
 
 1. ✅ Audio Capture Module
-2. ✅ Translation/Model Manager
+2. 🔄 Translation/Model Manager
 3. 🔄 Translation/Local LLM
 4. 🔄 Speech to Text (Whisper)
 5. 🔄 UI Module
@@ -42,9 +42,9 @@
    - ✅ Buffer management
    - ✅ Real-time audio data handling
 
-### 2. ✅ Translation/Model Manager
-**Status**: Completed
-**Implementation**: 100%
+### 2. 🔄 Translation/Model Manager
+**Status**: In Progress
+**Implementation**: ~90%
 
 #### Data Structures
 - **Input**:
@@ -72,11 +72,17 @@
    - ✅ Progress reporting
    - ✅ Translation options management
 
-3. ✅ **Worker Thread Management**
+3. 🔄 **Worker Thread Management**
    - ✅ Request queue management
    - ✅ Asynchronous processing
    - ✅ Thread safety
-   - ✅ Resource cleanup
+   - ❌ Resource cleanup optimization
+
+4. ✅ **Model Download**
+   - ✅ Manual download via download_model.sh script
+   - ✅ Support for multiple language pairs
+   - ✅ Configurable download path
+   - ✅ Error handling and verification
 
 ### 3. 🔄 Translation/Local LLM
 **Status**: In Progress

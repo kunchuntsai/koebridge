@@ -144,7 +144,7 @@ std::shared_ptr<LLMModel> LLMManager::createModel(const translation::ModelInfo& 
     std::string targetLanguage = "eng_Latn"; // English
 
     // Check config for language settings
-    Config& configInstance = Config::getInstance();
+    utils::Config& configInstance = utils::Config::getInstance();
     sourceLanguage = configInstance.getString("translation.source_language", sourceLanguage);
     targetLanguage = configInstance.getString("translation.target_language", targetLanguage);
 

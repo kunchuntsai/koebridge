@@ -19,6 +19,11 @@ ModelManager::ModelManager(const std::string& modelPath)
     : modelPath_(modelPath.empty() ? getModelPathFromConfig() : modelPath)
     , modelLoaded_(false)
     , shouldStop_(false) {
+
+    // Load configuration if not already loaded
+    if (!utils::Config::getInstance().load("config/config.ini")) {
+        LOG_ERROR("Failed to load configuration file");
+    }
 }
 
 ModelManager::~ModelManager() {
@@ -43,6 +48,17 @@ bool ModelManager::initialize() {
 
     // Scan for available models
     scanForModels();
+
+    // Try to load default model if specified
+    std::string defaultModel = utils::Config::getInstance().getString("translation.default_model", "");
+    if (!defaultModel.empty()) {
+        if (!loadModel(defaultModel)) {
+            LOG_WARNING("Failed to load default model: " + defaultModel);
+        } else {
+            LOG_INFO("Loaded default model: " + defaultModel);
+        }
+    }
+
     return true;
 }
 
@@ -109,18 +125,24 @@ bool ModelManager::isModelLoaded() const {
 }
 
 bool ModelManager::downloadModel(const std::string& modelId, ProgressCallback callback) {
-    // TODO: Implement model download functionality
-    // This is just a placeholder
-    if (callback) {
-        callback(0, "Starting download for model: " + modelId);
-        callback(50, "Downloading model: " + modelId);
-        callback(100, "Completed download for model: " + modelId);
+    // Check if model already exists in the configured path
+    QDir modelDir(QString::fromStdString(modelPath_));
+    QString modelPath = modelDir.filePath(QString::fromStdString(modelId + ".bin"));
+    QFileInfo modelFile(modelPath);
+
+    if (modelFile.exists()) {
+        if (callback) {
+            callback(100, "Model already exists: " + modelId);
+        }
+        LOG_INFO("Model already exists: " + modelId);
+        return true;
     }
 
-    // Rescan for models to include the newly downloaded one
-    scanForModels();
-
-    return true;
+    if (callback) {
+        callback(0, "Model not found. Please use download_model.sh script to download: " + modelId);
+    }
+    LOG_INFO("Model not found. Please use download_model.sh script to download: " + modelId);
+    return false;
 }
 
 void ModelManager::unloadCurrentModel() {
@@ -224,19 +246,16 @@ std::future<TranslationResult> ModelManager::queueTranslation(
 }
 
 std::string ModelManager::getModelPathFromConfig() const {
-    // TODO: Use actual config service instead of hardcoded paths
-
-    // If not specified, use default location
-    QString dataPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-    QString modelDirPath = dataPath + "/models";
+    // Get model path from config with proper path expansion
+    QString modelPath = QString::fromStdString(utils::Config::getInstance().getPath("translation.model_path", "./_dataset/models"));
 
     // Create directory if it doesn't exist
-    QDir dir(modelDirPath);
+    QDir dir(modelPath);
     if (!dir.exists()) {
         dir.mkpath(".");
     }
 
-    return modelDirPath.toStdString();
+    return modelPath.toStdString();
 }
 
 void ModelManager::scanForModels() {

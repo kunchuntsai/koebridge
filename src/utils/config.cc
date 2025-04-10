@@ -4,6 +4,9 @@
 #include <cstdlib>
 #include <stdexcept>
 
+namespace koebridge {
+namespace utils {
+
 Config& Config::getInstance() {
     static Config instance;
     return instance;
@@ -150,3 +153,6 @@ std::string Config::expandPath(const std::string& path) const {
 
     return result;
 }
+
+} // namespace utils
+} // namespace koebridge

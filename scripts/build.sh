@@ -11,6 +11,11 @@ show_usage() {
     echo "Options:"
     echo "  -c, --clean    Clean build (remove build directory)"
     echo "  -h, --help     Display this help message"
+    echo "  --all          Build both app and tests"
+    echo "  --debug        Build in debug mode"
+    echo "  --release      Build in release mode"
+    echo "  --tests        Build tests"
+    echo "  --tests-run    Build and run tests"
 }
 
 # Function to check if a command exists
@@ -66,6 +71,10 @@ while [[ $# -gt 0 ]]; do
             BUILD_TYPE="Release"
             shift
             ;;
+        --all)
+            BUILD_TESTS="ON"
+            shift
+            ;;
         --tests)
             BUILD_TESTS="ON"
             shift
@@ -85,7 +94,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         *)
             echo "Unknown option: $1"
-            echo "Usage: $0 [--debug|--release] [--tests|--tests-run] [--clean]"
+            echo "Usage: $0 [--debug|--release] [--all|--tests|--tests-run] [--clean]"
             exit 1
             ;;
     esac
