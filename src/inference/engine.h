@@ -87,6 +87,18 @@ public:
      */
     std::string detokenize(const std::vector<int>& tokens);
 
+    /**
+     * @brief Get the tokenizer instance
+     * @return void* Pointer to the tokenizer instance
+     */
+    void* getTokenizer();
+
+    /**
+     * @brief Get the logits from the last inference
+     * @return std::vector<float> Vector of logits from the last inference
+     */
+    std::vector<float> getLogits();
+
 private:
     class Impl;
     std::unique_ptr<Impl> pImpl_;

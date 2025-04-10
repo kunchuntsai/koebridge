@@ -118,6 +118,109 @@ TEST_F(LLMModelTest, ConfigurationChanges) {
     EXPECT_FLOAT_EQ(updatedConfig.temperature, 0.8f);
 }
 
+TEST_F(LLMModelTest, PromptFormatting) {
+    // Initialize the model
+    ASSERT_TRUE(model_->initialize());
+
+    // Test different model types
+    modelInfo_.modelType = "chatml";
+    model_ = std::make_unique<LLMModel>(modelInfo_, config_);
+    ASSERT_TRUE(model_->initialize());
+
+    std::string prompt = "Hello, world!";
+    std::string formattedPrompt = model_->formatPrompt(prompt);
+    EXPECT_TRUE(formattedPrompt.find("<|im_start|>user") != std::string::npos);
+    EXPECT_TRUE(formattedPrompt.find("<|im_end|>") != std::string::npos);
+    EXPECT_TRUE(formattedPrompt.find("<|im_start|>assistant") != std::string::npos);
+    EXPECT_TRUE(formattedPrompt.find(prompt) != std::string::npos);
+
+    // Test Alpaca format
+    modelInfo_.modelType = "alpaca";
+    model_ = std::make_unique<LLMModel>(modelInfo_, config_);
+    ASSERT_TRUE(model_->initialize());
+
+    formattedPrompt = model_->formatPrompt(prompt);
+    EXPECT_TRUE(formattedPrompt.find("### Instruction:") != std::string::npos);
+    EXPECT_TRUE(formattedPrompt.find("### Response:") != std::string::npos);
+    EXPECT_TRUE(formattedPrompt.find(prompt) != std::string::npos);
+
+    // Test LLaMA format
+    modelInfo_.modelType = "llama";
+    model_ = std::make_unique<LLMModel>(modelInfo_, config_);
+    ASSERT_TRUE(model_->initialize());
+
+    formattedPrompt = model_->formatPrompt(prompt);
+    EXPECT_TRUE(formattedPrompt.find("[INST]") != std::string::npos);
+    EXPECT_TRUE(formattedPrompt.find("[/INST]") != std::string::npos);
+    EXPECT_TRUE(formattedPrompt.find(prompt) != std::string::npos);
+}
+
+TEST_F(LLMModelTest, Tokenization) {
+    // Initialize the model
+    ASSERT_TRUE(model_->initialize());
+
+    // Test tokenization
+    std::string text = "Hello, world!";
+    std::vector<int> tokens = model_->localTokenize(text);
+
+    // Verify tokenization
+    EXPECT_FALSE(tokens.empty());
+    EXPECT_EQ(tokens.front(), 1);  // BOS token
+    EXPECT_EQ(tokens.back(), 2);   // EOS token
+
+    // Test detokenization
+    std::string detokenized = model_->localDetokenize(tokens);
+
+    // The detokenized text might not be exactly the same due to tokenization differences
+    // but it should not be empty
+    EXPECT_FALSE(detokenized.empty());
+}
+
+TEST_F(LLMModelTest, SamplingParameters) {
+    // Initialize the model
+    ASSERT_TRUE(model_->initialize());
+
+    // Set different sampling parameters
+    LLMConfig config = model_->getConfig();
+    config.temperature = 0.0f;  // Deterministic sampling
+    config.topK = 1;            // Only keep the most likely token
+    config.topP = 0.1f;         // Very low nucleus sampling
+    config.repeatPenalty = 2.0f; // Strong repeat penalty
+
+    model_->setConfig(config);
+
+    // Generate text with these parameters
+    LLMOutput output = model_->complete("Hello, world!");
+
+    // Verify the output
+    EXPECT_TRUE(output.success);
+    EXPECT_FALSE(output.text.empty());
+}
+
+TEST_F(LLMModelTest, FormatPromptChatML) {
+    std::string prompt = "Hello, how are you?";
+    modelInfo_.modelType = "chatml";
+
+    std::string formattedPrompt = model_->formatPrompt(prompt);
+    EXPECT_EQ(formattedPrompt, "<|im_start|>user\nHello, how are you?<|im_end|>\n<|im_start|>assistant\n");
+}
+
+TEST_F(LLMModelTest, FormatPromptAlpaca) {
+    std::string prompt = "Hello, how are you?";
+    modelInfo_.modelType = "alpaca";
+
+    std::string formattedPrompt = model_->formatPrompt(prompt);
+    EXPECT_EQ(formattedPrompt, "### Instruction:\nHello, how are you?\n\n### Response:\n");
+}
+
+TEST_F(LLMModelTest, FormatPromptLlama) {
+    std::string prompt = "Hello, how are you?";
+    modelInfo_.modelType = "llama";
+
+    std::string formattedPrompt = model_->formatPrompt(prompt);
+    EXPECT_EQ(formattedPrompt, "[INST] Hello, how are you? [/INST]");
+}
+
 } // namespace testing
 } // namespace llm
 } // namespace koebridge

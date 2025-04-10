@@ -18,7 +18,8 @@ namespace inference {
 
 class InferenceEngine::Impl {
 public:
-    Impl() : ctx_(nullptr), model_(nullptr), initialized_(false) {
+    Impl() : ctx_(nullptr), model_(nullptr), initialized_(false), logits_(nullptr), vocabSize_(0),
+             tokenizer_(nullptr, [](void*){}) {
         // Initialize default special tokens
         specialTokens_ = {
             {"<s>", 1},      // BOS token
@@ -312,12 +313,26 @@ public:
         return initialized_;
     }
 
+    void* getTokenizer() {
+        return tokenizer_.get();
+    }
+
+    std::vector<float> getLogits() {
+        if (!initialized_ || !logits_) {
+            return std::vector<float>();
+        }
+        return std::vector<float>(logits_, logits_ + vocabSize_);
+    }
+
 private:
     struct ggml_context* ctx_;
     struct ggml_tensor* model_;
     bool initialized_;
     std::vector<std::string> vocab_;
     std::map<std::string, int> specialTokens_;
+    std::unique_ptr<void, void(*)(void*)> tokenizer_;
+    float* logits_;
+    size_t vocabSize_;
 };
 
 // InferenceEngine implementation
@@ -342,6 +357,14 @@ std::vector<int> InferenceEngine::runInference(
 
 bool InferenceEngine::isInitialized() const {
     return pImpl_->isInitialized();
+}
+
+void* InferenceEngine::getTokenizer() {
+    return pImpl_->getTokenizer();
+}
+
+std::vector<float> InferenceEngine::getLogits() {
+    return pImpl_->getLogits();
 }
 
 } // namespace inference

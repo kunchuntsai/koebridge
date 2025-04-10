@@ -42,6 +42,16 @@ if(BUILD_TESTS)
         ${CMAKE_SOURCE_DIR}/src/utils/config.cc
     )
 
+    add_executable(nllb_model_test
+        unit/llm/nllb_model_test.cc
+        ${CMAKE_SOURCE_DIR}/src/llm/nllb_model.cc
+        ${CMAKE_SOURCE_DIR}/src/llm/llm_model.cc
+        ${CMAKE_SOURCE_DIR}/src/models/ggml_model.cc
+        ${CMAKE_SOURCE_DIR}/src/inference/engine.cc
+        ${CMAKE_SOURCE_DIR}/src/utils/logger.cc
+        ${CMAKE_SOURCE_DIR}/src/utils/config.cc
+    )
+
     add_executable(llm_manager_test
         unit/llm/llm_manager_test.cc
         ${CMAKE_SOURCE_DIR}/src/llm/llm_manager.cc
@@ -67,6 +77,7 @@ if(BUILD_TESTS)
     set_target_properties(translation_service_test PROPERTIES AUTOMOC ON)
     set_target_properties(model_manager_test PROPERTIES AUTOMOC ON)
     set_target_properties(llm_model_test PROPERTIES AUTOMOC ON)
+    set_target_properties(nllb_model_test PROPERTIES AUTOMOC ON)
     set_target_properties(llm_manager_test PROPERTIES AUTOMOC ON)
     # set_target_properties(ggml_model_test PROPERTIES AUTOMOC ON)
 
@@ -84,7 +95,7 @@ if(BUILD_TESTS)
         Qt6::Widgets
         Qt6::Concurrent
         ${PortAudio_LIBRARIES}
-        ${SENTENCEPIECE_LIBRARIES}
+        ${SentencePiece_LIBRARIES}
         GTest::gtest
         GTest::gtest_main
         ggml
@@ -95,7 +106,7 @@ if(BUILD_TESTS)
     target_link_libraries(model_manager_test PRIVATE
         Qt6::Core
         Qt6::Widgets
-        ${SENTENCEPIECE_LIBRARIES}
+        ${SentencePiece_LIBRARIES}
         GTest::gtest
         GTest::gtest_main
         ggml
@@ -107,33 +118,48 @@ if(BUILD_TESTS)
         Qt6::Core
         Qt6::Widgets
         Qt6::Concurrent
-        ${SENTENCEPIECE_LIBRARIES}
+        ${PortAudio_LIBRARIES}
+        ${SentencePiece_LIBRARIES}
         GTest::gtest
         GTest::gtest_main
         ggml
         ggml-base
-        ggml-cpu
+    )
+
+    target_link_libraries(nllb_model_test PRIVATE
+        Qt6::Core
+        Qt6::Widgets
+        Qt6::Concurrent
+        ${PortAudio_LIBRARIES}
+        ${SentencePiece_LIBRARIES}
+        GTest::gtest
+        GTest::gtest_main
+        ggml
+        ggml-base
     )
 
     target_link_libraries(llm_manager_test PRIVATE
         Qt6::Core
         Qt6::Widgets
         Qt6::Concurrent
-        ${SENTENCEPIECE_LIBRARIES}
+        ${PortAudio_LIBRARIES}
+        ${SentencePiece_LIBRARIES}
         GTest::gtest
         GTest::gtest_main
         ggml
         ggml-base
-        ggml-cpu
     )
 
+    # Temporarily disable ggml_model_test due to interface mismatch
     # target_link_libraries(ggml_model_test PRIVATE
     #     Qt6::Core
     #     Qt6::Widgets
-    #     ${SENTENCEPIECE_LIBRARIES}
+    #     ${SentencePiece_LIBRARIES}
     #     GTest::gtest
     #     GTest::gtest_main
     #     ggml
+    #     ggml-base
+    #     ggml-cpu
     # )
 
     # Include directories for each test
@@ -146,38 +172,45 @@ if(BUILD_TESTS)
     target_include_directories(translation_service_test PRIVATE
         ${CMAKE_SOURCE_DIR}/src
         ${CMAKE_SOURCE_DIR}/include
-        ${SENTENCEPIECE_INCLUDE_DIRS}
+        ${SentencePiece_INCLUDE_DIRS}
     )
 
     target_include_directories(model_manager_test PRIVATE
         ${CMAKE_SOURCE_DIR}/src
         ${CMAKE_SOURCE_DIR}/include
-        ${SENTENCEPIECE_INCLUDE_DIRS}
+        ${SentencePiece_INCLUDE_DIRS}
     )
 
     target_include_directories(llm_model_test PRIVATE
         ${CMAKE_SOURCE_DIR}/src
         ${CMAKE_SOURCE_DIR}/include
-        ${SENTENCEPIECE_INCLUDE_DIRS}
+        ${SentencePiece_INCLUDE_DIRS}
+    )
+
+    target_include_directories(nllb_model_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/include
+        ${SentencePiece_INCLUDE_DIRS}
     )
 
     target_include_directories(llm_manager_test PRIVATE
         ${CMAKE_SOURCE_DIR}/src
         ${CMAKE_SOURCE_DIR}/include
-        ${SENTENCEPIECE_INCLUDE_DIRS}
+        ${SentencePiece_INCLUDE_DIRS}
     )
 
     # target_include_directories(ggml_model_test PRIVATE
     #     ${CMAKE_SOURCE_DIR}/src
     #     ${CMAKE_SOURCE_DIR}/include
-    #     ${SENTENCEPIECE_INCLUDE_DIRS}
+    #     ${SentencePiece_INCLUDE_DIRS}
     # )
 
     # Add tests to CTest
-    add_test(NAME AudioCaptureTest COMMAND audio_capture_test)
-    add_test(NAME TranslationServiceTest COMMAND translation_service_test)
-    add_test(NAME ModelManagerTest COMMAND model_manager_test)
-    add_test(NAME LLMModelTest COMMAND llm_model_test)
-    add_test(NAME LLMManagerTest COMMAND llm_manager_test)
-    # add_test(NAME GgmlModelTest COMMAND ggml_model_test)
+    add_test(NAME audio_capture_test COMMAND audio_capture_test)
+    add_test(NAME translation_service_test COMMAND translation_service_test)
+    add_test(NAME model_manager_test COMMAND model_manager_test)
+    add_test(NAME llm_model_test COMMAND llm_model_test)
+    add_test(NAME nllb_model_test COMMAND nllb_model_test)
+    add_test(NAME llm_manager_test COMMAND llm_manager_test)
+    # add_test(NAME ggml_model_test COMMAND ggml_model_test)
 endif()

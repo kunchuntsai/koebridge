@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include "llm/llm_model.h"
+#include "llm_model.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -21,35 +21,35 @@ namespace llm {
  */
 class NLLBModel : public LLMModel {
 public:
-    /**
-     * @brief Constructor
-     * @param modelInfo Information about the model
-     * @param sourceLanguage Source language code
-     * @param targetLanguage Target language code
-     * @param config LLM configuration
-     */
-    NLLBModel(
-        const translation::ModelInfo& modelInfo,
-        const std::string& sourceLanguage,
-        const std::string& targetLanguage,
-        const LLMConfig& config
-    );
+    friend class koebridge::llm::testing::NLLBModelTest;
 
     /**
-     * @brief Destructor
+     * @brief Constructor for NLLBModel
+     * @param modelInfo Information about the model to load
+     * @param sourceLanguage Source language code
+     * @param targetLanguage Target language code
+     * @param config Configuration options for the LLM
+     */
+    NLLBModel(const translation::ModelInfo& modelInfo,
+              const std::string& sourceLanguage,
+              const std::string& targetLanguage,
+              const LLMConfig& config = LLMConfig());
+
+    /**
+     * @brief Destructor for NLLBModel
      */
     ~NLLBModel() override;
 
     /**
-     * @brief Initialize the model
-     * @return True if initialization was successful, false otherwise
+     * @brief Initialize the NLLB model
+     * @return bool True if initialization was successful
      */
     bool initialize() override;
 
     /**
      * @brief Translate text from source to target language
      * @param text Text to translate
-     * @return Translation result
+     * @return LLMOutput The translation result
      */
     LLMOutput translate(const std::string& text);
 
@@ -67,44 +67,44 @@ public:
 
     /**
      * @brief Get the source language
-     * @return Source language code
+     * @return std::string Source language code
      */
     std::string getSourceLanguage() const;
 
     /**
      * @brief Get the target language
-     * @return Target language code
+     * @return std::string Target language code
      */
     std::string getTargetLanguage() const;
 
+    /**
+     * @brief Format the input prompt according to the model's requirements
+     * @param prompt The input prompt to format
+     * @return std::string The formatted prompt
+     */
+    std::string formatPrompt(const std::string& prompt) override;
+
+    /**
+     * @brief Convert text to token IDs using the local tokenizer
+     * @param text Input text to tokenize
+     * @return std::vector<int> Vector of token IDs
+     */
+    std::vector<int> localTokenize(const std::string& text) override;
+
+    /**
+     * @brief Convert token IDs back to text using the local tokenizer
+     * @param tokens Vector of token IDs to detokenize
+     * @return std::string The detokenized text
+     */
+    std::string localDetokenize(const std::vector<int>& tokens) override;
+
 protected:
-    /**
-     * @brief Format a prompt for the model
-     * @param prompt Raw input prompt
-     * @return Formatted prompt
-     */
-    std::string formatPrompt(const std::string& prompt);
-
-    /**
-     * @brief Convert input text to token IDs
-     * @param text Input text
-     * @return Vector of token IDs
-     */
-    std::vector<int> localTokenize(const std::string& text);
-
-    /**
-     * @brief Convert token IDs back to text
-     * @param tokens Vector of token IDs
-     * @return Output text
-     */
-    std::string localDetokenize(const std::vector<int>& tokens);
-
-private:
     /**
      * @brief Initialize language-specific tokens
      */
     void initializeLanguageTokens();
 
+private:
     std::string sourceLanguage_;                   ///< Source language code
     std::string targetLanguage_;                   ///< Target language code
     std::unordered_map<std::string, int> specialTokens_; ///< Special tokens for languages

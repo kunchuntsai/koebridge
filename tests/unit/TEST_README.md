@@ -13,29 +13,85 @@ tests/unit/
 
 ## Running Tests
 
-### Run All Tests
+There are multiple ways to run the tests:
+
+### 1. Using the Run Script (Recommended)
 ```bash
+# Run all tests
 ./scripts/run.sh --tests
+
+# Run specific test modules
+./scripts/run.sh --tests --audio      # Run audio tests only
+./scripts/run.sh --tests --translation # Run translation tests only
+./scripts/run.sh --tests --models     # Run model tests only
+
+# Run with options
+./scripts/run.sh --tests --debug --clean  # Clean build and run with debug symbols
 ```
 
-### Run Specific Test Modules
+### 2. Using CMake/CTest Directly
 ```bash
-# Run audio tests only
-./scripts/run.sh --tests --audio
+# From project root
+mkdir -p build && cd build
+cmake ..
+make -j$(nproc)
 
-# Run translation tests only
-./scripts/run.sh --tests --translation
+# Run all tests with CTest
+ctest --output-on-failure
+
+# Run specific tests
+./tests/unit/audio/audio_capture_test
+./tests/unit/translation/translation_service_test
+./tests/unit/llm/llm_model_test
+./tests/unit/llm/nllb_model_test
+./tests/unit/llm/llm_manager_test
 ```
 
 ### Test Options
 
+#### Script Options
 - `--debug`: Run tests in debug mode with debug symbols
 - `--clean`: Clean build directory before building and running tests
-- Combined example:
-  ```bash
-  # Clean build, run tests with debug symbols
-  ./scripts/run.sh --tests --debug --clean
-  ```
+- `--audio`: Run only audio-related tests
+- `--translation`: Run only translation-related tests
+- `--models`: Run only model-related tests
+- `--verbose`: Show detailed test output
+
+#### CTest Options
+- `--output-on-failure`: Show output for failed tests
+- `-V`: Verbose output
+- `-R pattern`: Run tests matching pattern
+- `-E pattern`: Exclude tests matching pattern
+- `-j N`: Run N tests in parallel
+
+### Troubleshooting Test Failures
+
+1. Check test dependencies:
+   - Google Test framework
+   - PortAudio (for audio tests)
+   - SentencePiece (for translation tests)
+   - Qt6 (for UI components)
+
+2. Common issues:
+   - Missing libraries: Check CMake output for missing dependencies
+   - Permission issues: Ensure model files are accessible
+   - Resource conflicts: Close any applications using audio devices
+   - Memory issues: Try running single tests in isolation
+
+3. Debug failing tests:
+   ```bash
+   # Run specific test with GDB
+   gdb ./build/tests/unit/audio/audio_capture_test
+
+   # In GDB
+   (gdb) break TestClassName::TestName
+   (gdb) run
+   ```
+
+4. View test logs:
+   - Check `build/Testing/Temporary/LastTest.log`
+   - Use `--verbose` option with run.sh
+   - Run tests with `-V` option in CTest
 
 ## Writing Tests
 

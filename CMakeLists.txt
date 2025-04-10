@@ -51,6 +51,9 @@ set(SOURCES
     src/utils/config.cc
     src/utils/logger.cc
     src/inference/engine.cc
+    src/llm/llm_model.cc
+    src/llm/nllb_model.cc
+    src/llm/llm_manager.cc
 )
 
 # Add header files
@@ -66,6 +69,9 @@ set(HEADERS
     src/utils/config.h
     src/utils/logger.h
     src/inference/engine.h
+    src/llm/llm_model.h
+    src/llm/nllb_model.h
+    src/llm/llm_manager.h
 )
 
 # Create main executable
@@ -84,7 +90,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt6::Widgets
     Qt6::Concurrent
     ${PortAudio_LIBRARIES}
-    ${SENTENCEPIECE_LIBRARIES}
+    ${SentencePiece_LIBRARIES}
     GTest::gtest
     Threads::Threads
     OpenGL::GL
@@ -97,7 +103,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${PortAudio_INCLUDE_DIRS}
-    ${SENTENCEPIECE_INCLUDE_DIRS}
+    ${SentencePiece_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/ggml/include
 )
 

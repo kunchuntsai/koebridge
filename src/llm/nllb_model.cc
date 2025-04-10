@@ -68,108 +68,89 @@ std::string NLLBModel::getTargetLanguage() const {
 }
 
 std::string NLLBModel::formatPrompt(const std::string& prompt) {
-    // NLLB uses a special format where target language token comes first
-    // Format: "<2{target_language}> {source_text}"
-    // e.g., "<2eng_Latn> こんにちは" for Japanese to English
+    // Get source and target language tokens
+    auto sourceToken = specialTokens_.find("__" + sourceLanguage_ + "__");
+    auto targetToken = specialTokens_.find("__" + targetLanguage_ + "__");
 
-    // Create the formatted prompt with target language token
-    std::string formattedPrompt = "<2" + targetLanguage_ + "> " + prompt;
+    if (sourceToken == specialTokens_.end() || targetToken == specialTokens_.end()) {
+        std::cerr << "Unsupported language pair: " << sourceLanguage_ << " -> " << targetLanguage_ << std::endl;
+        return prompt;
+    }
 
-    return formattedPrompt;
+    // Format: <source_lang> text <target_lang>
+    return std::to_string(sourceToken->second) + " " + prompt + " " + std::to_string(targetToken->second);
 }
 
 std::vector<int> NLLBModel::localTokenize(const std::string& text) {
-    // TODO: Implement proper NLLB tokenization using SentencePiece
-    // This is a placeholder implementation
-
     std::vector<int> tokens;
 
-    // Add BOS token (1)
-    tokens.push_back(1);
+    // Add BOS token
+    tokens.push_back(1);  // BOS token ID
+
+    // Get the tokenizer from the engine
+    auto* tokenizer = static_cast<sentencepiece::SentencePieceProcessor*>(engine_->getTokenizer());
+    if (!tokenizer) {
+        std::cerr << "Tokenizer not available" << std::endl;
+        return tokens;
+    }
+
+    // Add source language token
+    auto sourceIt = specialTokens_.find(sourceLanguage_);
+    if (sourceIt != specialTokens_.end()) {
+        tokens.push_back(sourceIt->second);
+    }
+
+    // Tokenize the text
+    std::vector<int> textTokens;
+    tokenizer->Encode(text, &textTokens);
+    tokens.insert(tokens.end(), textTokens.begin(), textTokens.end());
 
     // Add target language token
-    // The actual NLLB models have special token IDs for each language
-    // In a real implementation, we would look up the token ID in the vocabulary
-    std::string targetLangToken = "<2" + targetLanguage_ + ">";
-    if (specialTokens_.find(targetLangToken) != specialTokens_.end()) {
-        tokens.push_back(specialTokens_[targetLangToken]);
-    } else {
-        // If not found, add some placeholder token ID
-        tokens.push_back(250000); // Arbitrary high number unlikely to conflict
+    auto targetIt = specialTokens_.find(targetLanguage_);
+    if (targetIt != specialTokens_.end()) {
+        tokens.push_back(targetIt->second);
     }
 
-    // Tokenize the actual text
-    // In a real implementation, this would use SentencePiece or another tokenizer
-    // For now, we'll do character-by-character tokenization
-    for (char c : text) {
-        tokens.push_back(static_cast<int>(c) + 10000); // Offset to avoid conflicts
-    }
-
-    // Add EOS token (2)
-    tokens.push_back(2);
+    // Add EOS token
+    tokens.push_back(2);  // EOS token ID
 
     return tokens;
 }
 
 std::string NLLBModel::localDetokenize(const std::vector<int>& tokens) {
-    // TODO: Implement proper NLLB detokenization using SentencePiece
-    // This is a placeholder implementation
-
-    std::string text;
-    bool isLanguageToken = false;
-
-    for (int token : tokens) {
-        // Skip special tokens (BOS=1, EOS=2)
-        if (token == 1 || token == 2) {
-            continue;
-        }
-
-        // Skip language tokens (they usually have very high IDs)
-        if (token > 200000) {
-            isLanguageToken = true;
-            continue;
-        }
-
-        // If we just processed a language token, skip the next space
-        if (isLanguageToken && token == ' ') {
-            isLanguageToken = false;
-            continue;
-        }
-
-        // Convert token ID back to character
-        // In our simple implementation, we subtract the offset we added
-        if (token >= 10000) {
-            text += static_cast<char>(token - 10000);
-        }
+    // Get the tokenizer from the engine
+    auto* tokenizer = static_cast<sentencepiece::SentencePieceProcessor*>(engine_->getTokenizer());
+    if (!tokenizer) {
+        std::cerr << "Tokenizer not available" << std::endl;
+        return "";
     }
 
+    // Remove special tokens (BOS, EOS, and language tokens)
+    std::vector<int> textTokens;
+    if (tokens.size() > 4) {  // BOS + src_lang + text + tgt_lang + EOS
+        textTokens.assign(tokens.begin() + 2, tokens.end() - 2);
+    }
+
+    // Detokenize
+    std::string text;
+    tokenizer->Decode(textTokens, &text);
     return text;
 }
 
 void NLLBModel::initializeLanguageTokens() {
-    // NLLB has special tokens for each language
-    // In a real implementation, these would be loaded from the vocabulary file
-    // For now, we'll use placeholder values
-
-    // Clear existing tokens
-    specialTokens_.clear();
-
-    // Add special tokens
-    specialTokens_["<pad>"] = 0;
-    specialTokens_["</s>"] = 2;
-    specialTokens_["<unk>"] = 3;
-
-    // Add language tokens (these should be the actual IDs from the vocabulary)
-    specialTokens_["<2jpn_Jpan>"] = 250001; // Japanese
-    specialTokens_["<2eng_Latn>"] = 250002; // English
-    specialTokens_["<2zho_Hans>"] = 250003; // Chinese (Simplified)
-    specialTokens_["<2kor_Hang>"] = 250004; // Korean
-    specialTokens_["<2fra_Latn>"] = 250005; // French
-    specialTokens_["<2deu_Latn>"] = 250006; // German
-    specialTokens_["<2rus_Cyrl>"] = 250007; // Russian
-    specialTokens_["<2spa_Latn>"] = 250008; // Spanish
-
-    // Add more languages as needed
+    // Initialize special tokens for NLLB model
+    specialTokens_ = {
+        {"__ja__", 250025},  // Japanese
+        {"__en__", 250004},  // English
+        {"__zh__", 250010},  // Chinese
+        {"__ko__", 250011},  // Korean
+        {"__fr__", 250005},  // French
+        {"__de__", 250006},  // German
+        {"__es__", 250007},  // Spanish
+        {"__it__", 250008},  // Italian
+        {"__pt__", 250009},  // Portuguese
+        {"__ru__", 250012}   // Russian
+    };
 }
 
 } // namespace llm

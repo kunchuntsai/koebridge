@@ -9,6 +9,7 @@
 #include <iostream>
 #include <future>
 #include <algorithm>
+#include <chrono>
 
 namespace koebridge {
 namespace llm {
@@ -91,72 +92,180 @@ bool LLMModel::runGeneration(const std::string& prompt, std::vector<int>& output
         return false;
     }
 
-    // TODO: Implement actual LLM generation
-    // - Tokenize the prompt
-    // - Set up the context window
-    // - Run inference through GGML
-    // - Implement sampling logic (topK, topP, temperature)
-    // - Handle generation stopping criteria
+    auto startTime = std::chrono::high_resolution_clock::now();
 
-    // For now, implement a simple placeholder that gives a basic response
+    // Tokenize the prompt
     std::vector<int> promptTokens = localTokenize(prompt);
+    stats.inputTokenCount = promptTokens.size();
 
-    // Generate a simple response
-    std::string dummyResponse = "This is a placeholder response from the LLM model. Actual implementation pending.";
-    std::vector<int> responseTokens;
-    for (char c : dummyResponse) {
-        responseTokens.push_back(static_cast<int>(c));
+    // Set up the context window
+    size_t maxContextSize = std::min(config_.contextSize, static_cast<int>(promptTokens.size() + config_.maxLength));
+    std::vector<int> contextTokens(promptTokens.begin(), promptTokens.begin() + maxContextSize);
+
+    // Initialize output vector with context
+    output = contextTokens;
+
+    // Run inference through GGML
+    auto inferenceStartTime = std::chrono::high_resolution_clock::now();
+
+    // Generate tokens one by one
+    for (int i = 0; i < config_.maxLength; ++i) {
+        // Get next token probabilities
+        std::vector<float> logits = engine_->getLogits();
+
+        // Apply temperature
+        if (config_.temperature > 0) {
+            for (float& logit : logits) {
+                logit /= config_.temperature;
+            }
+        }
+
+        // Apply top-k filtering
+        if (config_.topK > 0) {
+            std::vector<std::pair<float, int>> logitIndexPairs;
+            for (size_t j = 0; j < logits.size(); ++j) {
+                logitIndexPairs.emplace_back(logits[j], j);
+            }
+            std::partial_sort(logitIndexPairs.begin(),
+                            logitIndexPairs.begin() + config_.topK,
+                            logitIndexPairs.end(),
+                            std::greater<>());
+
+            // Zero out probabilities for tokens not in top-k
+            for (size_t j = config_.topK; j < logitIndexPairs.size(); ++j) {
+                logits[logitIndexPairs[j].second] = -INFINITY;
+            }
+        }
+
+        // Apply top-p (nucleus) sampling
+        if (config_.topP < 1.0f) {
+            std::vector<float> sortedLogits = logits;
+            std::sort(sortedLogits.begin(), sortedLogits.end(), std::greater<>());
+
+            float cumulativeProb = 0.0f;
+            float threshold = -INFINITY;
+
+            for (float logit : sortedLogits) {
+                float prob = std::exp(logit);
+                cumulativeProb += prob;
+                if (cumulativeProb >= config_.topP) {
+                    threshold = logit;
+                    break;
+                }
+            }
+
+            for (float& logit : logits) {
+                if (logit < threshold) {
+                    logit = -INFINITY;
+                }
+            }
+        }
+
+        // Apply repeat penalty
+        if (config_.repeatPenalty > 1.0f) {
+            for (int token : output) {
+                logits[token] /= config_.repeatPenalty;
+            }
+        }
+
+        // Sample next token
+        float sum = 0.0f;
+        for (float logit : logits) {
+            sum += std::exp(logit);
+        }
+
+        float r = static_cast<float>(rand()) / RAND_MAX * sum;
+        float cumsum = 0.0f;
+        int nextToken = -1;
+
+        for (size_t j = 0; j < logits.size(); ++j) {
+            cumsum += std::exp(logits[j]);
+            if (cumsum > r) {
+                nextToken = j;
+                break;
+            }
+        }
+
+        if (nextToken == -1) {
+            nextToken = logits.size() - 1;
+        }
+
+        // Add token to output
+        output.push_back(nextToken);
+
+        // Check for end of sequence
+        if (nextToken == 2) { // EOS token
+            break;
+        }
     }
 
-    // Combine prompt and response tokens
-    output = responseTokens;
+    auto inferenceEndTime = std::chrono::high_resolution_clock::now();
+    auto endTime = std::chrono::high_resolution_clock::now();
 
-    // Set basic stats
-    stats.totalTimeMs = 100.0;
-    stats.inferenceTimeMs = 80.0;
-    stats.inputTokenCount = promptTokens.size();
-    stats.outputTokenCount = responseTokens.size();
+    // Update statistics
+    stats.outputTokenCount = output.size() - promptTokens.size();
+    stats.totalTimeMs = std::chrono::duration<float, std::milli>(endTime - startTime).count();
+    stats.inferenceTimeMs = std::chrono::duration<float, std::milli>(inferenceEndTime - inferenceStartTime).count();
 
     return true;
 }
 
 std::string LLMModel::formatPrompt(const std::string& prompt) {
-    // TODO: Implement proper prompt formatting based on the model type
-    // Different models use different formats (e.g., ChatML, Alpaca, etc.)
+    std::string modelType = modelInfo_.modelType;
 
-    // For now, just return the original prompt
-    return prompt;
+    if (modelType == "chatml") {
+        return "<|im_start|>user\n" + prompt + "<|im_end|>\n<|im_start|>assistant\n";
+    } else if (modelType == "alpaca") {
+        return "### Instruction:\n" + prompt + "\n\n### Response:\n";
+    } else if (modelType == "llama") {
+        return "[INST] " + prompt + " [/INST]";
+    } else {
+        // Default format
+        return prompt + "\n";
+    }
 }
 
 std::vector<int> LLMModel::localTokenize(const std::string& text) {
-    // Simple character-based tokenization as a placeholder
     std::vector<int> tokens;
 
     // Add BOS token
-    tokens.push_back(1);  // Assuming 1 is BOS token ID
+    tokens.push_back(1);  // BOS token ID
 
-    // Convert characters to token IDs
-    for (char c : text) {
-        tokens.push_back(static_cast<int>(c));
+    // Get the tokenizer from the engine
+    auto* tokenizer = static_cast<sentencepiece::SentencePieceProcessor*>(engine_->getTokenizer());
+    if (!tokenizer) {
+        std::cerr << "Tokenizer not available" << std::endl;
+        return tokens;
     }
 
+    // Tokenize the text
+    std::vector<int> textTokens;
+    tokenizer->Encode(text, &textTokens);
+    tokens.insert(tokens.end(), textTokens.begin(), textTokens.end());
+
     // Add EOS token
-    tokens.push_back(2);  // Assuming 2 is EOS token ID
+    tokens.push_back(2);  // EOS token ID
 
     return tokens;
 }
 
 std::string LLMModel::localDetokenize(const std::vector<int>& tokens) {
-    // Simple character-based detokenization as a placeholder
-    std::string text;
-
-    for (int token : tokens) {
-        // Skip special tokens (BOS=1, EOS=2)
-        if (token != 1 && token != 2) {
-            text += static_cast<char>(token);
-        }
+    // Get the tokenizer from the engine
+    auto* tokenizer = static_cast<sentencepiece::SentencePieceProcessor*>(engine_->getTokenizer());
+    if (!tokenizer) {
+        std::cerr << "Tokenizer not available" << std::endl;
+        return "";
     }
 
+    // Remove special tokens (BOS and EOS)
+    std::vector<int> textTokens;
+    if (tokens.size() > 2) {
+        textTokens.assign(tokens.begin() + 1, tokens.end() - 1);
+    }
+
+    // Detokenize
+    std::string text;
+    tokenizer->Decode(textTokens, &text);
     return text;
 }
 
