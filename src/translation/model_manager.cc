@@ -52,14 +52,23 @@ bool ModelManager::loadModel(const std::string& modelId) {
                 unloadModel();
             }
 
-            // TODO: Implement actual model loading with GGMLModel
-            // For now, just update the model info
+            // Create and initialize the GGML model
+            translationModel_ = std::make_shared<models::GGMLModel>(model);
+            if (!translationModel_->initialize()) {
+                LOG_ERROR("Failed to initialize model: " + modelId);
+                translationModel_.reset();
+                return false;
+            }
+
+            // Update model info
             activeModel_ = model;
             modelLoaded_ = true;
+            LOG_INFO("Successfully loaded model: " + modelId);
             return true;
         }
     }
     
+    LOG_ERROR("Model not found: " + modelId);
     return false;
 }
 
@@ -103,9 +112,7 @@ std::shared_ptr<ITranslationModel> ModelManager::getTranslationModel() {
         return nullptr;
     }
     
-    // TODO: Return the actual translation model when implemented
-    // For now, just return null to avoid undefined symbols
-    return nullptr;
+    return translationModel_;
 }
 
 std::string ModelManager::getModelPathFromConfig() const {
@@ -129,13 +136,13 @@ void ModelManager::scanForModels() {
     
     QDir dir(QString::fromStdString(modelPath_));
     if (!dir.exists()) {
-        std::cerr << "Model directory does not exist: " << modelPath_ << std::endl;
+        LOG_ERROR("Model directory does not exist: " + modelPath_);
         return;
     }
     
     // Scan directory for model files
     const auto entries = dir.entryInfoList(QDir::Files | QDir::Readable, QDir::Name);
-    std::cerr << "Found " << entries.size() << " files in model directory" << std::endl;
+    LOG_INFO("Found " + std::to_string(entries.size()) + " files in model directory");
     
     for (const auto& entry : entries) {
         // Filter for model files
@@ -180,12 +187,11 @@ void ModelManager::scanForModels() {
             }
             
             models_.push_back(info);
-            std::cerr << "Added model: " << info.id << " at " << info.path 
-                      << " (Type: " << info.modelType << ")" << std::endl;
+            LOG_INFO("Added model: " + info.id + " at " + info.path + " (Type: " + info.modelType + ")");
         }
     }
     
-    std::cerr << "Total models found: " << models_.size() << std::endl;
+    LOG_INFO("Total models found: " + std::to_string(models_.size()));
 }
 
 } // namespace translation

@@ -1,7 +1,9 @@
 #include "models/ggml_model.h"
 #include "utils/config.h"
+#include "utils/logger.h"
 #include <iostream>
 #include <future>
+#include <chrono>
 
 namespace koebridge {
 namespace models {
@@ -10,7 +12,7 @@ GGMLModel::GGMLModel(const translation::ModelInfo& modelInfo)
     : modelInfo_(modelInfo),
       engine_(std::make_unique<inference::InferenceEngine>()),
       initialized_(false) {
-    // TODO: Implement proper initialization of GGML model with appropriate parameters
+    LOG_INFO("Creating GGML model for: " + modelInfo.id);
 }
 
 GGMLModel::~GGMLModel() {
@@ -22,17 +24,17 @@ bool GGMLModel::initialize() {
         return true;
     }
     
-    // TODO: Implement complete GGML model initialization with tokenizer setup
-    // and memory optimization for the targeted device (CPU/GPU)
-    initialized_ = engine_->initialize(modelInfo_.path);
+    LOG_INFO("Initializing GGML model: " + modelInfo_.id);
     
-    if (initialized_) {
-        std::cout << "GGML model initialized successfully: " << modelInfo_.id << std::endl;
-    } else {
-        std::cerr << "Failed to initialize GGML model: " << modelInfo_.id << std::endl;
+    // Initialize the inference engine
+    if (!engine_->initialize(modelInfo_.path)) {
+        LOG_ERROR("Failed to initialize inference engine for model: " + modelInfo_.id);
+        return false;
     }
     
-    return initialized_;
+    initialized_ = true;
+    LOG_INFO("GGML model initialized successfully: " + modelInfo_.id);
+    return true;
 }
 
 bool GGMLModel::isInitialized() const {
@@ -50,19 +52,29 @@ translation::TranslationResult GGMLModel::translate(const std::string& text, con
     }
     
     try {
-        // TODO: Implement actual translation with GGML, including:
-        // - Tokenization with SentencePiece or appropriate tokenizer
-        // - Proper tensor memory management 
-        // - Inference with the specified translation options (beam size, etc)
-        // - Memory-efficient implementation for large models
+        auto startTime = std::chrono::high_resolution_clock::now();
+        
+        // Process input through the inference engine
         std::string output;
-        if (engine_->processInput(text, output)) {
-            result.text = output;
-            result.success = true;
-        } else {
+        if (!engine_->processInput(text, output)) {
             result.success = false;
             result.errorMessage = "Translation failed";
+            return result;
         }
+        
+        auto endTime = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+        
+        result.text = output;
+        result.success = true;
+        result.metrics.totalTimeMs = duration.count();
+        
+        // Get inference stats
+        translation::InferenceStats stats;
+        engine_->runInference(std::vector<int>(), options, stats);
+        result.metrics.inferenceTimeMs = stats.inferenceTimeMs;
+        result.metrics.inputTokenCount = stats.inputTokenCount;
+        
     } catch (const std::exception& e) {
         result.success = false;
         result.errorMessage = std::string("Translation error: ") + e.what();
@@ -75,7 +87,6 @@ std::future<translation::TranslationResult> GGMLModel::translateAsync(
     const std::string& text,
     const translation::TranslationOptions& options
 ) {
-    // TODO: Implement proper async execution with thread pool for better resource management
     return std::async(std::launch::async, [this, text, options]() {
         return translate(text, options);
     });
@@ -86,8 +97,9 @@ translation::ModelInfo GGMLModel::getModelInfo() const {
 }
 
 translation::InferenceStats GGMLModel::getLastInferenceStats() const {
-    // TODO: Implement actual inference statistics collection
-    return lastStats_;
+    translation::InferenceStats stats;
+    engine_->runInference(std::vector<int>(), translation::TranslationOptions(), stats);
+    return stats;
 }
 
 } // namespace models

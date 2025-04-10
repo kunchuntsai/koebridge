@@ -97,13 +97,16 @@ mkdir -p build
 
 # Initialize and update submodules
 echo "Initializing submodules..."
-if [ ! -d "third_party/ggml" ]; then
+
+# Check if the submodule is already in the git index
+if git ls-files --error-unmatch third_party/ggml >/dev/null 2>&1; then
+    echo "GGML submodule already exists in index, updating..."
+    git submodule update --init --recursive third_party/ggml
+else
     echo "Adding GGML submodule..."
     git submodule add https://github.com/ggerganov/ggml.git third_party/ggml
+    git submodule update --init --recursive third_party/ggml
 fi
-
-echo "Updating submodules..."
-git submodule update --init --recursive
 
 # Create config directory if it doesn't exist
 echo "Setting up configuration..."

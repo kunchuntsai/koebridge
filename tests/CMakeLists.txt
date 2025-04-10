@@ -18,6 +18,8 @@ if(BUILD_TESTS)
         unit/translation/translation_service_test.cc
         ${CMAKE_SOURCE_DIR}/src/translation/translation_service.cc
         ${CMAKE_SOURCE_DIR}/src/translation/model_manager.cc
+        ${CMAKE_SOURCE_DIR}/src/models/ggml_model.cc
+        ${CMAKE_SOURCE_DIR}/src/inference/engine.cc
         ${CMAKE_SOURCE_DIR}/src/utils/logger.cc
         ${CMAKE_SOURCE_DIR}/src/utils/config.cc
     )
@@ -25,6 +27,8 @@ if(BUILD_TESTS)
     add_executable(model_manager_test
         unit/translation/model_manager_test.cc
         ${CMAKE_SOURCE_DIR}/src/translation/model_manager.cc
+        ${CMAKE_SOURCE_DIR}/src/models/ggml_model.cc
+        ${CMAKE_SOURCE_DIR}/src/inference/engine.cc
         ${CMAKE_SOURCE_DIR}/src/utils/logger.cc
         ${CMAKE_SOURCE_DIR}/src/utils/config.cc
     )
@@ -84,6 +88,8 @@ if(BUILD_TESTS)
         GTest::gtest
         GTest::gtest_main
         ggml
+        ggml-base
+        ggml-cpu
     )
     
     target_link_libraries(model_manager_test PRIVATE
@@ -93,6 +99,8 @@ if(BUILD_TESTS)
         GTest::gtest
         GTest::gtest_main
         ggml
+        ggml-base
+        ggml-cpu
     )
     
     target_link_libraries(llm_model_test PRIVATE
@@ -103,6 +111,8 @@ if(BUILD_TESTS)
         GTest::gtest
         GTest::gtest_main
         ggml
+        ggml-base
+        ggml-cpu
     )
     
     target_link_libraries(llm_manager_test PRIVATE
@@ -113,6 +123,8 @@ if(BUILD_TESTS)
         GTest::gtest
         GTest::gtest_main
         ggml
+        ggml-base
+        ggml-cpu
     )
     
     # target_link_libraries(ggml_model_test PRIVATE
