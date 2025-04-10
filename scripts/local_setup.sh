@@ -97,50 +97,49 @@ mkdir -p build
 
 # Initialize and update submodules
 echo "Initializing submodules..."
+git submodule init
+git submodule update --init --recursive
 
-# Check if the submodule is already in the git index
-if git ls-files --error-unmatch third_party/ggml >/dev/null 2>&1; then
-    echo "GGML submodule already exists in index, updating..."
-    git submodule update --init --recursive third_party/ggml
-else
-    echo "Adding GGML submodule..."
-    git submodule add https://github.com/ggerganov/ggml.git third_party/ggml
-    git submodule update --init --recursive third_party/ggml
-fi
+# Configure GGML and Whisper
+echo "Configuring GGML and Whisper..."
+cd third_party/ggml
+git checkout master
+mkdir -p build
+cd build
+cmake .. \
+    -DGGML_METAL=OFF \
+    -DGGML_USE_METAL=OFF \
+    -DGGML_CPU=ON \
+    -DGGML_BLAS=ON \
+    -DGGML_OPENMP=ON \
+    -DGGML_NATIVE=ON
+make -j$(sysctl -n hw.ncpu)
+cd ../..
 
-# Create config directory if it doesn't exist
-echo "Setting up configuration..."
-mkdir -p config
+cd whisper.cpp
+git checkout master
+mkdir -p build
+cd build
+cmake .. \
+    -DWHISPER_METAL=OFF \
+    -DWHISPER_USE_METAL=OFF \
+    -DWHISPER_CPU=ON \
+    -DWHISPER_BLAS=ON \
+    -DWHISPER_OPENMP=ON \
+    -DWHISPER_NATIVE=ON
+make -j$(sysctl -n hw.ncpu)
+cd ../..
 
-# Create default config.ini if it doesn't exist
-if [ ! -f "config/config.ini" ]; then
-    echo "Creating default config.ini..."
-    cat > config/config.ini << EOL
-[audio]
-sample_rate = 16000
-channels = 1
-frames_per_buffer = 1024
+# Return to project root
+cd "$PROJECT_ROOT"
 
-[translation]
-model_path = ./_dataset/models
-default_model = nllb-ja-en
+# Build the main project
+echo "Building main project..."
+cd build
+cmake ..
+make -j$(sysctl -n hw.ncpu)
 
-[ui]
-window_width = 800
-window_height = 600
-theme = light
-EOL
-fi
-
-# Create models directory
-echo "Setting up models directory..."
-mkdir -p _dataset/models
-
-# Set up permissions
-echo "Setting up permissions..."
-chmod +x scripts/*.sh
-
-echo "Local setup completed successfully!"
+echo "Setup completed successfully!"
 echo ""
 echo "Next steps:"
 echo "1. Run ./scripts/build.sh to build the project"

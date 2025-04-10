@@ -39,6 +39,9 @@ find_package(Qt6 COMPONENTS Core Widgets Concurrent REQUIRED)
 # Add GGML as a subdirectory
 add_subdirectory(third_party/ggml)
 
+# Add Whisper as a subdirectory
+add_subdirectory(third_party/whisper.cpp)
+
 # Add source files
 set(SOURCES
     src/main.cc
@@ -54,6 +57,7 @@ set(SOURCES
     src/llm/llm_model.cc
     src/llm/nllb_model.cc
     src/llm/llm_manager.cc
+    src/stt/whisper_wrapper.cc
 )
 
 # Add header files
@@ -72,6 +76,7 @@ set(HEADERS
     src/llm/llm_model.h
     src/llm/nllb_model.h
     src/llm/llm_manager.h
+    src/stt/whisper_wrapper.h
 )
 
 # Create main executable
@@ -96,6 +101,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     OpenGL::GL
     ggml
     ggml-base
+    whisper
 )
 
 # Include directories
@@ -105,6 +111,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${PortAudio_INCLUDE_DIRS}
     ${SentencePiece_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/ggml/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/whisper.cpp/include
 )
 
 # Add tests if enabled

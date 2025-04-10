@@ -158,18 +158,21 @@ For detailed information about the test suite, writing tests, and test structure
 
 ```
 koebridge/
-├── config/              # Configurations
-├── include/             # Public header files
-├── src/                 # Source files
-│   ├── audio/           # Audio capture and processing
-│   ├── translation/     # Translation service
-│   └── utils/           # Utility functions
-├── tests/               # Test files
-│   └── unit/            # Unit tests
-│       ├── audio/       # Audio-related tests
-│       └── translation/ # Translation-related tests
-├── third_party/         # Third-party dependencies
-└── scripts/             # Build and utility scripts
+├── src/                  # Source code
+│   ├── audio/            # Audio capture module
+│   ├── translation/      # Translation module
+│   ├── llm/              # Language Model module
+│   ├── stt/              # Speech-to-Text module
+│   ├── models/           # Model implementations
+│   ├── inference/        # Inference engine
+│   └── utils/            # Utility functions
+├── tests/                # Test files
+│   └── unit/             # Unit tests
+│       ├── audio/        # Audio module tests
+│       ├── translation/  # Translation module tests
+│       ├── llm/          # LLM module tests
+│       └── stt/          # Speech-to-Text module tests
+└── scripts/              # Build and utility scripts
 ```
 
 ## License

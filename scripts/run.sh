@@ -116,11 +116,16 @@ function build_project() {
 if [ "$RUN_TESTS" = true ]; then
     echo "Preparing to run tests..."
     
-    # Build with tests enabled
-    build_project true
-    if [ $? -ne 0 ]; then
-        echo "Test build failed. Aborting test run."
-        exit 1
+    # Check if test executables exist or force build is set
+    if [ ! -d "build" ] || [ ! -f "build/tests/audio_capture_test" ] || [ "$FORCE_BUILD" = true ]; then
+        # Build with tests enabled
+        build_project true
+        if [ $? -ne 0 ]; then
+            echo "Test build failed. Aborting test run."
+            exit 1
+        fi
+    else
+        echo "Tests already built. Skipping build step."
     fi
     
     # Change to build directory
