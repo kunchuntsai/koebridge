@@ -15,65 +15,65 @@ class QMenu;
 /**
  * @class MainWindow
  * @brief Main window class for the application
- * 
+ *
  * This class represents the main application window, providing the primary
  * user interface for the translation application. It includes menus, actions,
  * and the main translation view.
  */
 class MainWindow : public QMainWindow {
     Q_OBJECT
-    
+
 public:
     /**
      * @brief Constructor for MainWindow
      * @param parent Parent widget (default: nullptr)
      */
     MainWindow(QWidget *parent = nullptr);
-    
+
     /**
      * @brief Destructor for MainWindow
      */
     ~MainWindow();
-    
+
     /**
      * @brief Update the translated text in the UI
      * @param text The translated text to display
      */
     void updateTranslatedText(const QString& text);
-    
+
 private slots:
     /**
      * @brief Start the translation process
      */
     void startTranslation();
-    
+
     /**
      * @brief Stop the translation process
      */
     void stopTranslation();
-    
+
     /**
      * @brief Show the settings dialog
      */
     void showSettings();
-    
+
 private:
     /**
      * @brief Create application actions
      */
     void createActions();
-    
+
     /**
      * @brief Create application menus
      */
     void createMenus();
-    
+
     TranslationView* translationView; ///< Main translation view widget
-    
+
     QMenu* fileMenu;    ///< File menu
     QMenu* toolsMenu;   ///< Tools menu
     QMenu* helpMenu;    ///< Help menu
-    
+
     QAction* startAct;      ///< Start translation action
     QAction* stopAct;       ///< Stop translation action
     QAction* settingsAct;   ///< Show settings action

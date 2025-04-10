@@ -52,7 +52,7 @@ struct TranslationOptions {
         FORMAL,
         CASUAL
     };
-    
+
     float temperature = 0.7f;          ///< Sampling temperature
     int maxLength = 1024;              ///< Maximum sequence length
     int beamSize = 4;                  ///< Beam search size

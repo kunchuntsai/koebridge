@@ -209,16 +209,16 @@ Handles model files:
 class IModelManager {
 public:
     virtual ~IModelManager() = default;
-    
+
     // Model discovery
     virtual std::vector<ModelInfo> getAvailableModels() const = 0;
     virtual ModelInfo getActiveModel() const = 0;
-    
+
     // Model lifecycle
     virtual bool loadModel(const std::string& modelId) = 0;
     virtual void unloadCurrentModel() = 0;
     virtual bool isModelLoaded() const = 0;
-    
+
     // Model operations
     virtual std::shared_ptr<ITranslationModel> getTranslationModel() = 0;
     virtual bool downloadModel(const std::string& modelId, ProgressCallback callback) = 0;
@@ -231,15 +231,15 @@ public:
 class ITranslationModel {
 public:
     virtual ~ITranslationModel() = default;
-    
+
     // Initialization
     virtual bool initialize() = 0;
     virtual bool isInitialized() const = 0;
-    
+
     // Core operations
     virtual TranslationResult translate(const std::string& text, const TranslationOptions& options) = 0;
     virtual std::future<TranslationResult> translateAsync(const std::string& text, const TranslationOptions& options) = 0;
-    
+
     // Status and metadata
     virtual ModelInfo getModelInfo() const = 0;
     virtual InferenceStats getLastInferenceStats() const = 0;
@@ -252,19 +252,19 @@ public:
 class ITranslationService {
 public:
     virtual ~ITranslationService() = default;
-    
+
     // Service lifecycle
     virtual bool initialize() = 0;
     virtual void shutdown() = 0;
-    
+
     // Translation operations
     virtual std::string translateText(const std::string& japaneseText) = 0;
     virtual void translateTextAsync(const std::string& japaneseText, TranslationCallback callback) = 0;
-    
+
     // Configuration
     virtual void setTranslationOptions(const TranslationOptions& options) = 0;
     virtual TranslationOptions getTranslationOptions() const = 0;
-    
+
     // Signals (implemented via Qt signals/slots)
     // void translationComplete(const std::string& sourceText, const std::string& translatedText);
     // void translationError(const std::string& sourceText, const std::string& errorMessage);
@@ -302,14 +302,14 @@ struct TranslationOptions {
     int maxLength = 1024;        // Maximum output length
     int beamSize = 4;            // Beam search size
     bool streamOutput = false;   // Stream partial results
-    
+
     enum class Style {           // Translation style
         LITERAL,
         NATURAL,
         FORMAL,
         CASUAL
     } style = Style::NATURAL;
-    
+
     int timeoutMs = 30000;       // Translation timeout
 };
 ```
@@ -322,7 +322,7 @@ struct TranslationResult {
     std::string translatedText;  // Translated English text
     bool success = false;        // Success flag
     std::string errorMessage;    // Error message if any
-    
+
     struct Metrics {
         double totalTimeMs;      // Total processing time
         double inferenceTimeMs;  // Model inference time
@@ -403,14 +403,14 @@ class ModelManager : public IModelManager {
 public:
     ModelManager(const std::string& modelDir);
     ~ModelManager() override;
-    
+
     std::vector<ModelInfo> getAvailableModels() const override;
     ModelInfo getActiveModel() const override;
-    
+
     bool loadModel(const std::string& modelId) override;
     void unloadCurrentModel() override;
     bool isModelLoaded() const override;
-    
+
     std::shared_ptr<ITranslationModel> getTranslationModel() override;
     bool downloadModel(const std::string& modelId, ProgressCallback callback) override;
 
@@ -419,7 +419,7 @@ private:
     std::vector<ModelInfo> availableModels_;
     std::shared_ptr<ITranslationModel> currentModel_;
     ModelInfo activeModelInfo_;
-    
+
     void scanAvailableModels();
     std::shared_ptr<ITranslationModel> createModelInstance(const ModelInfo& info);
 };
@@ -433,13 +433,13 @@ class GGMLModel : public ITranslationModel {
 public:
     GGMLModel(const ModelInfo& modelInfo);
     ~GGMLModel() override;
-    
+
     bool initialize() override;
     bool isInitialized() const override;
-    
+
     TranslationResult translate(const std::string& text, const TranslationOptions& options) override;
     std::future<TranslationResult> translateAsync(const std::string& text, const TranslationOptions& options) override;
-    
+
     ModelInfo getModelInfo() const override;
     InferenceStats getLastInferenceStats() const override;
 
@@ -447,14 +447,14 @@ private:
     ModelInfo modelInfo_;
     bool initialized_ = false;
     InferenceStats lastStats_;
-    
+
     // GGML specific members
     void* model_ = nullptr;
     void* ctx_ = nullptr;
-    
+
     // Thread pool for async operations
     std::shared_ptr<ThreadPool> threadPool_;
-    
+
     // Internal methods
     void tokenize(const std::string& text, std::vector<int>& tokens);
     std::string detokenize(const std::vector<int>& tokens);
@@ -468,17 +468,17 @@ private:
 // translation_service.h
 class TranslationService : public QObject, public ITranslationService {
     Q_OBJECT
-    
+
 public:
     TranslationService(std::shared_ptr<IModelManager> modelManager);
     ~TranslationService() override;
-    
+
     bool initialize() override;
     void shutdown() override;
-    
+
     std::string translateText(const std::string& japaneseText) override;
     void translateTextAsync(const std::string& japaneseText, TranslationCallback callback) override;
-    
+
     void setTranslationOptions(const TranslationOptions& options) override;
     TranslationOptions getTranslationOptions() const override;
 
@@ -491,11 +491,11 @@ private:
     std::shared_ptr<IModelManager> modelManager_;
     TranslationOptions options_;
     std::atomic<bool> initialized_ = false;
-    
+
     // Worker thread and queue
     std::unique_ptr<QThread> workerThread_;
     std::unique_ptr<TranslationWorker> worker_;
-    
+
     // Helper methods
     std::string preprocess(const std::string& text);
     std::string postprocess(const std::string& text);

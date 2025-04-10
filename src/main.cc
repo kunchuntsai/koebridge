@@ -114,7 +114,7 @@ public:
         try {
             // Initialize model manager (using mock for now)
             auto modelManager = std::make_shared<MockModelManager>();
-            
+
             // Initialize translation service
             translationService_ = std::make_unique<TranslationService>(modelManager);
             if (!translationService_->initialize()) {
@@ -128,7 +128,7 @@ public:
             // Connect signals
             connect(mainWindow_.get(), &MainWindow::translateRequested,
                     this, &Application::onTranslateRequested);
-            
+
             // Connect translation service signals to main window
             connect(translationService_.get(), &TranslationService::progressUpdated,
                     mainWindow_.get(), &MainWindow::updateProgress);
@@ -137,7 +137,7 @@ public:
                         QMessageBox::warning(mainWindow_.get(), "Error", message);
                     });
         } catch (const std::exception& e) {
-            QMessageBox::critical(nullptr, "Error", 
+            QMessageBox::critical(nullptr, "Error",
                 QString("Failed to initialize application: %1").arg(e.what()));
             QCoreApplication::quit();
         }
@@ -159,7 +159,7 @@ private:
 
 int main(int argc, char* argv[]) {
     QApplication app(argc, argv);
-    
+
     try {
         Application application;
         return app.exec();

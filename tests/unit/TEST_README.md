@@ -99,4 +99,4 @@ gdb ./build/tests/unit/audio/audio_capture_test
 
 ## Continuous Integration
 
-Tests are automatically run in the CI pipeline. See `.github/workflows/ci.yml` for details. 
+Tests are automatically run in the CI pipeline. See `.github/workflows/ci.yml` for details.

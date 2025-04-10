@@ -25,7 +25,7 @@ struct AudioDeviceInfo {
 /**
  * @class AudioCapture
  * @brief A class that manages audio capture from input devices
- * 
+ *
  * This class provides functionality to capture audio from input devices
  * such as microphones or other audio sources.
  */
@@ -38,48 +38,48 @@ public:
      * @param framesPerBuffer Number of frames per buffer (default: 1024)
      */
     AudioCapture(int sampleRate = 16000, int channels = 1, int framesPerBuffer = 1024);
-    
+
     /**
      * @brief Destructor for AudioCapture
      */
     ~AudioCapture();
-    
+
     /**
      * @brief Get list of available audio input devices
      * @return Vector of AudioDeviceInfo for available input devices
      */
     std::vector<AudioDeviceInfo> getInputDevices() const;
-    
+
     /**
      * @brief Select an input device by index
      * @param deviceIndex Index of the device to select
      * @return bool True if device was selected successfully
      */
     bool selectInputDevice(int deviceIndex);
-    
+
     /**
      * @brief Starts the audio capture process
      * @return bool True if capture started successfully, false otherwise
      */
     bool start();
-    
+
     /**
      * @brief Stops the audio capture process
      */
     void stop();
-    
+
     /**
      * @brief Set callback function for audio data
      * @param callback Function to be called with audio data
      */
     void setAudioCallback(std::function<void(const float*, int)> callback);
-    
+
     /**
      * @brief Get current error message if any
      * @return std::string Error message
      */
     std::string getLastError() const;
-    
+
 private:
     /**
      * @brief PortAudio callback function
@@ -95,7 +95,7 @@ private:
                          const PaStreamCallbackTimeInfo* timeInfo,
                          PaStreamCallbackFlags statusFlags,
                          void* userData);
-    
+
     PaStream* stream_;                    ///< PortAudio stream
     int sampleRate_;                      ///< Sample rate
     int channels_;                        ///< Number of channels

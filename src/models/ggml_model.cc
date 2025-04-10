@@ -23,15 +23,15 @@ bool GGMLModel::initialize() {
     if (initialized_) {
         return true;
     }
-    
+
     LOG_INFO("Initializing GGML model: " + modelInfo_.id);
-    
+
     // Initialize the inference engine
     if (!engine_->initialize(modelInfo_.path)) {
         LOG_ERROR("Failed to initialize inference engine for model: " + modelInfo_.id);
         return false;
     }
-    
+
     initialized_ = true;
     LOG_INFO("GGML model initialized successfully: " + modelInfo_.id);
     return true;
@@ -44,16 +44,16 @@ bool GGMLModel::isInitialized() const {
 translation::TranslationResult GGMLModel::translate(const std::string& text, const translation::TranslationOptions& options) {
     translation::TranslationResult result;
     result.sourceText = text;
-    
+
     if (!initialized_) {
         result.success = false;
         result.errorMessage = "Model not initialized";
         return result;
     }
-    
+
     try {
         auto startTime = std::chrono::high_resolution_clock::now();
-        
+
         // Process input through the inference engine
         std::string output;
         if (!engine_->processInput(text, output)) {
@@ -61,25 +61,25 @@ translation::TranslationResult GGMLModel::translate(const std::string& text, con
             result.errorMessage = "Translation failed";
             return result;
         }
-        
+
         auto endTime = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-        
+
         result.text = output;
         result.success = true;
         result.metrics.totalTimeMs = duration.count();
-        
+
         // Get inference stats
         translation::InferenceStats stats;
         engine_->runInference(std::vector<int>(), options, stats);
         result.metrics.inferenceTimeMs = stats.inferenceTimeMs;
         result.metrics.inputTokenCount = stats.inputTokenCount;
-        
+
     } catch (const std::exception& e) {
         result.success = false;
         result.errorMessage = std::string("Translation error: ") + e.what();
     }
-    
+
     return result;
 }
 

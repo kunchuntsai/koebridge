@@ -104,4 +104,4 @@ TEST_F(TranslationServiceTest, TestErrorHandling) {
     modelManager->loadModel("non_existent_model");
     result = translator->translateText("こんにちは");
     EXPECT_FALSE(result.empty());  // Updated to match the current implementation
-} 
+}

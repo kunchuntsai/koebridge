@@ -18,7 +18,7 @@ namespace translation {
 /**
  * @class Translator
  * @brief Main translation component that coordinates translation operations
- * 
+ *
  * This class serves as the main entry point for translation operations,
  * coordinating between the model manager and other components to provide
  * translation functionality.
@@ -31,21 +31,21 @@ public:
      * @brief Constructor for Translator
      */
     explicit Translator(std::shared_ptr<ModelManager> modelManager);
-    
+
     /**
      * @brief Initialize the translator with a model
      * @param modelPath Path to the translation model file
      * @return bool True if initialization was successful, false otherwise
      */
     bool initialize();
-    
+
     /**
      * @brief Translate source text to target language
      * @param sourceText The text to translate
      * @return std::string The translated text
      */
     bool translate(const std::string& input, std::string& output);
-    
+
     void setOptions(const TranslationOptions& options);
     TranslationOptions getOptions() const;
     bool isInitialized() const;

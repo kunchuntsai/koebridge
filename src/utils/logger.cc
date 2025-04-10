@@ -20,7 +20,7 @@ void Logger::setLevel(LogLevel level) {
 std::string getCurrentTimeStamp() {
     auto now = std::chrono::system_clock::now();
     auto time = std::chrono::system_clock::to_time_t(now);
-    
+
     std::stringstream ss;
     ss << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S");
     return ss.str();
@@ -30,7 +30,7 @@ void Logger::log(LogLevel level, const std::string& message) {
     if (level < currentLevel) {
         return;
     }
-    
+
     std::string levelStr;
     switch (level) {
         case LogLevel::DEBUG:   levelStr = "DEBUG"; break;
@@ -39,7 +39,7 @@ void Logger::log(LogLevel level, const std::string& message) {
         case LogLevel::ERROR:   levelStr = "ERROR"; break;
         case LogLevel::FATAL:   levelStr = "FATAL"; break;
     }
-    
+
     std::cout << "[" << getCurrentTimeStamp() << "] [" << levelStr << "] " << message << std::endl;
 }
 

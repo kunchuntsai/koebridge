@@ -135,4 +135,4 @@ To add new tests:
 - Google Test Framework
 - PortAudio
 - C++17 or later
-- CMake 3.16 or later 
+- CMake 3.16 or later

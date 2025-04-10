@@ -18,7 +18,7 @@ namespace translation {
 TranslationService::TranslationService(std::shared_ptr<IModelManager> modelManager)
     : modelManager_(std::move(modelManager))
     , initialized_(false) {
-    
+
     // Initialize default options
     options_.temperature = 0.7f;
     options_.maxLength = 1024;
@@ -35,18 +35,18 @@ bool TranslationService::initialize() {
     if (initialized_) {
         return true;
     }
-    
+
     if (!modelManager_) {
         emit error("Model manager not initialized");
         return false;
     }
-    
+
     // TODO: Implement complete initialization
     // - Load configuration from settings
     // - Initialize model manager
     // - Set up signal/slot connections for progress reporting
     // - Validate model availability
-    
+
     initialized_ = true;
     return true;
 }
@@ -64,17 +64,17 @@ bool TranslationService::translate(const std::string& input, std::string& output
         emit error("Translation service not initialized");
         return false;
     }
-    
+
     if (!validateInput(input)) {
         emit error("Invalid input text");
         return false;
     }
-    
+
     try {
         auto result = translateInternal(input);
         if (result.success) {
             output = result.text;
-            emit translationComplete(QString::fromStdString(input), 
+            emit translationComplete(QString::fromStdString(input),
                                   QString::fromStdString(output));
             return true;
         } else {
@@ -92,16 +92,16 @@ std::string TranslationService::translateText(const std::string& japaneseText) {
         emit error("Translation service not initialized");
         return "";
     }
-    
+
     if (!validateInput(japaneseText)) {
         emit error("Invalid input text");
         return "";
     }
-    
+
     try {
         auto result = translateInternal(japaneseText);
         if (result.success) {
-            emit translationComplete(QString::fromStdString(japaneseText), 
+            emit translationComplete(QString::fromStdString(japaneseText),
                                   QString::fromStdString(result.text));
             return result.text;
         } else {
@@ -120,27 +120,27 @@ void TranslationService::translateTextAsync(const std::string& japaneseText, Tra
         callback(TranslationResult{});
         return;
     }
-    
+
     if (!validateInput(japaneseText)) {
         emit error("Invalid input text");
         callback(TranslationResult{});
         return;
     }
-    
+
     // TODO: Implement proper thread pool for better resource management
     // - Create a thread pool to limit concurrent translations
     // - Add prioritization for translation requests
     // - Handle cancellation of pending requests
-    
+
     // Create a future watcher for async operation
     auto* watcher = new QFutureWatcher<TranslationResult>(this);
-    
+
     // Connect signals
     connect(watcher, &QFutureWatcher<TranslationResult>::finished, this, [this, watcher, callback, japaneseText]() {
         try {
             auto result = watcher->result();
             if (result.success) {
-                emit translationComplete(QString::fromStdString(japaneseText), 
+                emit translationComplete(QString::fromStdString(japaneseText),
                                       QString::fromStdString(result.text));
                 callback(result);
             } else {
@@ -153,12 +153,12 @@ void TranslationService::translateTextAsync(const std::string& japaneseText, Tra
         }
         watcher->deleteLater();
     });
-    
+
     // Start async operation
     QFuture<TranslationResult> future = QtConcurrent::run([this, japaneseText]() {
         return translateInternal(japaneseText);
     });
-    
+
     watcher->setFuture(future);
 }
 
@@ -181,7 +181,7 @@ TranslationOptions TranslationService::getTranslationOptions() const {
 TranslationResult TranslationService::translateInternal(const std::string& japaneseText) {
     TranslationResult result;
     result.sourceText = japaneseText;
-    
+
     // Check if a model is loaded
     auto model = modelManager_->getTranslationModel();
     if (!model) {
@@ -189,14 +189,14 @@ TranslationResult TranslationService::translateInternal(const std::string& japan
         result.errorMessage = "No translation model loaded";
         return result;
     }
-    
+
     try {
         // TODO: Implement advanced translation features
         // - Add pre-processing for Japanese text (normalize, segment)
         // - Add post-processing for English text (capitalization, formatting)
         // - Add caching of frequent translations
         // - Add statistics collection for translation quality monitoring
-        
+
         // Use the model to translate the text
         return model->translate(japaneseText, options_);
     } catch (const std::exception& e) {
@@ -227,4 +227,4 @@ void TranslationService::updateProgress(int progress) {
 }
 
 } // namespace translation
-} // namespace koebridge 
+} // namespace koebridge

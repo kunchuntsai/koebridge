@@ -14,14 +14,14 @@ bool Config::load(const std::string& filePath) {
     if (!file.is_open()) {
         return false;
     }
-    
+
     std::string line;
     while (std::getline(file, line)) {
         // Skip comments and empty lines
         if (line.empty() || line[0] == '#') {
             continue;
         }
-        
+
         std::istringstream iss(line);
         std::string key, value;
         if (std::getline(iss, key, '=') && std::getline(iss, value)) {
@@ -30,11 +30,11 @@ bool Config::load(const std::string& filePath) {
             key.erase(key.find_last_not_of(" \t") + 1);
             value.erase(0, value.find_first_not_of(" \t"));
             value.erase(value.find_last_not_of(" \t") + 1);
-            
+
             configData[key] = value;
         }
     }
-    
+
     return true;
 }
 
@@ -43,11 +43,11 @@ bool Config::save(const std::string& filePath) {
     if (!file.is_open()) {
         return false;
     }
-    
+
     for (const auto& pair : configData) {
         file << pair.first << " = " << pair.second << std::endl;
     }
-    
+
     return true;
 }
 
@@ -119,7 +119,7 @@ std::string Config::expandPath(const std::string& path) const {
     }
 
     std::string result = path;
-    
+
     // Expand home directory
     if (result[0] == '~') {
         const char* home = std::getenv("HOME");
@@ -129,7 +129,7 @@ std::string Config::expandPath(const std::string& path) const {
             throw std::runtime_error("HOME environment variable not set");
         }
     }
-    
+
     // Expand environment variables
     size_t pos = 0;
     while ((pos = result.find("${", pos)) != std::string::npos) {
@@ -137,16 +137,16 @@ std::string Config::expandPath(const std::string& path) const {
         if (end == std::string::npos) {
             break;
         }
-        
+
         std::string var = result.substr(pos + 2, end - pos - 2);
         const char* value = std::getenv(var.c_str());
-        
+
         if (value) {
             result.replace(pos, end - pos + 1, value);
         } else {
             throw std::runtime_error("Environment variable not set: " + var);
         }
     }
-    
+
     return result;
 }

@@ -23,7 +23,7 @@ using TranslationCallback = std::function<void(const TranslationResult&)>;
 /**
  * @class TranslationService
  * @brief Implementation of the translation service interface
- * 
+ *
  * This class provides the concrete implementation of the translation service,
  * handling both synchronous and asynchronous translation operations.
  */
@@ -48,7 +48,7 @@ public:
     void setOptions(const TranslationOptions& options) override;
     TranslationOptions getOptions() const override;
     bool isInitialized() const override;
-    
+
     // Additional methods not in the interface
     void shutdown();
     std::string translateText(const std::string& japaneseText);
@@ -94,4 +94,4 @@ private:
 };
 
 } // namespace translation
-} // namespace koebridge 
+} // namespace koebridge

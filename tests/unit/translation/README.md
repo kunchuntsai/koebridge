@@ -57,7 +57,7 @@ protected:
     void SetUp() override {
         // Test setup
     }
-    
+
     void TearDown() override {
         // Test cleanup
     }

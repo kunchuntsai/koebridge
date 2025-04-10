@@ -11,7 +11,7 @@ namespace translation {
 Translator::Translator(std::shared_ptr<ModelManager> modelManager)
     : modelManager_(std::move(modelManager))
     , initialized_(false) {
-    
+
     // Initialize default options
     options_.temperature = 0.7f;
     options_.maxLength = 1024;
@@ -28,12 +28,12 @@ bool Translator::initialize() {
     if (initialized_) {
         return true;
     }
-    
+
     if (!modelManager_) {
         emit error("Model manager not initialized");
         return false;
     }
-    
+
     initialized_ = true;
     return true;
 }
@@ -43,12 +43,12 @@ bool Translator::translate(const std::string& input, std::string& output) {
         emit error("Translator not initialized");
         return false;
     }
-    
+
     if (!validateInput(input)) {
         emit error("Invalid input text");
         return false;
     }
-    
+
     try {
         // TODO: Implement actual translation logic
         output = "Translated: " + input;

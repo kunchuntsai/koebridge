@@ -37,7 +37,7 @@ struct TranslationRequest {
 /**
  * @class TranslationWorker
  * @brief Worker class for handling translation requests in a separate thread
- * 
+ *
  * This class manages translation requests in a background thread, providing
  * asynchronous translation capabilities and progress reporting.
  */
@@ -48,7 +48,7 @@ public:
      * @param model Shared pointer to the translation model
      */
     explicit TranslationWorker(std::shared_ptr<ITranslationModel> model);
-    
+
     /**
      * @brief Destructor for TranslationWorker
      */
@@ -58,7 +58,7 @@ public:
      * @brief Start the worker thread
      */
     void start();
-    
+
     /**
      * @brief Stop the worker thread
      */
@@ -77,7 +77,7 @@ private:
      * @brief Process translation requests from the queue
      */
     void processRequests();
-    
+
     std::shared_ptr<ITranslationModel> model_;     ///< Translation model
     std::queue<TranslationRequest> requestQueue_;  ///< Queue of translation requests
     std::mutex queueMutex_;                        ///< Mutex for queue access

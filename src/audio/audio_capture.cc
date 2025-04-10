@@ -30,7 +30,7 @@ AudioCapture::~AudioCapture() {
 std::vector<AudioDeviceInfo> AudioCapture::getInputDevices() const {
     std::vector<AudioDeviceInfo> devices;
     int numDevices = Pa_GetDeviceCount();
-    
+
     for (int i = 0; i < numDevices; ++i) {
         const PaDeviceInfo* deviceInfo = Pa_GetDeviceInfo(i);
         if (deviceInfo->maxInputChannels > 0) {
@@ -43,7 +43,7 @@ std::vector<AudioDeviceInfo> AudioCapture::getInputDevices() const {
             devices.push_back(info);
         }
     }
-    
+
     return devices;
 }
 
@@ -52,13 +52,13 @@ bool AudioCapture::selectInputDevice(int deviceIndex) {
         lastError_ = "Invalid device index";
         return false;
     }
-    
+
     const PaDeviceInfo* deviceInfo = Pa_GetDeviceInfo(deviceIndex);
     if (deviceInfo->maxInputChannels == 0) {
         lastError_ = "Selected device has no input channels";
         return false;
     }
-    
+
     selectedDevice_ = deviceIndex;
     return true;
 }
@@ -68,14 +68,14 @@ bool AudioCapture::start() {
         lastError_ = "No input device selected";
         return false;
     }
-    
+
     PaStreamParameters inputParameters;
     inputParameters.device = selectedDevice_;
     inputParameters.channelCount = channels_;
     inputParameters.sampleFormat = paFloat32;
     inputParameters.suggestedLatency = Pa_GetDeviceInfo(selectedDevice_)->defaultLowInputLatency;
     inputParameters.hostApiSpecificStreamInfo = nullptr;
-    
+
     PaError err = Pa_OpenStream(&stream_,
                                &inputParameters,
                                nullptr,
@@ -84,12 +84,12 @@ bool AudioCapture::start() {
                                paClipOff,
                                paCallback,
                                this);
-    
+
     if (err != paNoError) {
         lastError_ = std::string("Failed to open stream: ") + Pa_GetErrorText(err);
         return false;
     }
-    
+
     err = Pa_StartStream(stream_);
     if (err != paNoError) {
         lastError_ = std::string("Failed to start stream: ") + Pa_GetErrorText(err);
@@ -97,7 +97,7 @@ bool AudioCapture::start() {
         stream_ = nullptr;
         return false;
     }
-    
+
     return true;
 }
 
@@ -123,16 +123,16 @@ int AudioCapture::paCallback(const void* inputBuffer, void* outputBuffer,
                            PaStreamCallbackFlags statusFlags,
                            void* userData) {
     AudioCapture* capture = static_cast<AudioCapture*>(userData);
-    
+
     if (statusFlags) {
         capture->lastError_ = "Stream callback error";
         return paComplete;
     }
-    
+
     if (inputBuffer && capture->audioCallback_) {
         const float* input = static_cast<const float*>(inputBuffer);
         capture->audioCallback_(input, framesPerBuffer);
     }
-    
+
     return paContinue;
 }

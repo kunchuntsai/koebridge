@@ -9,7 +9,7 @@ namespace translation {
 class ITranslationService {
 public:
     virtual ~ITranslationService() = default;
-    
+
     virtual bool initialize() = 0;
     virtual bool translate(const std::string& input, std::string& output) = 0;
     virtual void setOptions(const TranslationOptions& options) = 0;
@@ -18,4 +18,4 @@ public:
 };
 
 } // namespace translation
-} // namespace koebridge 
+} // namespace koebridge

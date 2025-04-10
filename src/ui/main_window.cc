@@ -11,10 +11,10 @@ MainWindow::MainWindow(QWidget *parent)
 {
     translationView = new TranslationView(this);
     setCentralWidget(translationView);
-    
+
     createActions();
     createMenus();
-    
+
     setWindowTitle(tr("KoeBridge"));
 }
 
@@ -26,15 +26,15 @@ void MainWindow::createActions() {
     startAct = new QAction(tr("&Start"), this);
     startAct->setShortcut(tr("Ctrl+S"));
     connect(startAct, &QAction::triggered, this, &MainWindow::startTranslation);
-    
+
     stopAct = new QAction(tr("S&top"), this);
     stopAct->setShortcut(tr("Ctrl+T"));
     stopAct->setEnabled(false);
     connect(stopAct, &QAction::triggered, this, &MainWindow::stopTranslation);
-    
+
     settingsAct = new QAction(tr("Se&ttings"), this);
     connect(settingsAct, &QAction::triggered, this, &MainWindow::showSettings);
-    
+
     exitAct = new QAction(tr("E&xit"), this);
     exitAct->setShortcut(tr("Ctrl+Q"));
     connect(exitAct, &QAction::triggered, this, &QApplication::quit);
@@ -46,10 +46,10 @@ void MainWindow::createMenus() {
     fileMenu->addAction(stopAct);
     fileMenu->addSeparator();
     fileMenu->addAction(exitAct);
-    
+
     toolsMenu = menuBar()->addMenu(tr("&Tools"));
     toolsMenu->addAction(settingsAct);
-    
+
     helpMenu = menuBar()->addMenu(tr("&Help"));
 }
 

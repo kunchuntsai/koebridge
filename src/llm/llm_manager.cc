@@ -24,18 +24,18 @@ bool LLMManager::initialize() {
     if (initialized_) {
         return true;
     }
-    
+
     if (!modelManager_) {
         std::cerr << "Model manager not provided" << std::endl;
         return false;
     }
-    
+
     // Ensure the model manager is initialized
     if (!modelManager_->initialize()) {
         std::cerr << "Failed to initialize model manager" << std::endl;
         return false;
     }
-    
+
     std::cout << "LLM manager initialized" << std::endl;
     initialized_ = true;
     return true;
@@ -46,31 +46,31 @@ bool LLMManager::loadModel(const std::string& modelId, const LLMConfig& config) 
         std::cerr << "LLM manager not initialized" << std::endl;
         return false;
     }
-    
+
     // First, have the model manager load the model
     if (!modelManager_->loadModel(modelId)) {
         std::cerr << "Failed to load model: " << modelId << std::endl;
         return false;
     }
-    
+
     // Get the model info
     activeModel_ = modelManager_->getActiveModel();
     config_ = config;
-    
+
     // Create the LLM model
     model_ = createModel(activeModel_, config_);
     if (!model_) {
         std::cerr << "Failed to create LLM model: " << modelId << std::endl;
         return false;
     }
-    
+
     // Initialize the model
     if (!model_->initialize()) {
         std::cerr << "Failed to initialize LLM model: " << modelId << std::endl;
         model_.reset();
         return false;
     }
-    
+
     std::cout << "Loaded LLM model: " << modelId << std::endl;
     return true;
 }
@@ -94,20 +94,20 @@ std::shared_ptr<LLMModel> LLMManager::getModel() {
 
 LLMOutput LLMManager::complete(const std::string& prompt) {
     LLMOutput output;
-    
+
     if (!isModelLoaded()) {
         output.success = false;
         output.errorMessage = "No LLM model loaded";
         return output;
     }
-    
+
     try {
         output = model_->complete(prompt);
     } catch (const std::exception& e) {
         output.success = false;
         output.errorMessage = std::string("Error during completion: ") + e.what();
     }
-    
+
     return output;
 }
 
@@ -121,7 +121,7 @@ std::future<LLMOutput> LLMManager::completeAsync(const std::string& prompt) {
         });
         return future;
     }
-    
+
     return model_->completeAsync(prompt);
 }
 
@@ -138,19 +138,19 @@ LLMConfig LLMManager::getConfig() const {
 
 std::shared_ptr<LLMModel> LLMManager::createModel(const translation::ModelInfo& modelInfo, const LLMConfig& config) {
     // Determine which model type to create based on the model file properties
-    
+
     // Default language settings
     std::string sourceLanguage = "jpn_Jpan"; // Japanese
     std::string targetLanguage = "eng_Latn"; // English
-    
+
     // Check config for language settings
     Config& configInstance = Config::getInstance();
     sourceLanguage = configInstance.getString("translation.source_language", sourceLanguage);
     targetLanguage = configInstance.getString("translation.target_language", targetLanguage);
-    
+
     // Check if this is an NLLB model based on filename
     if (modelInfo.id.find("nllb") != std::string::npos) {
-        std::cout << "Creating NLLB model with languages: " << sourceLanguage 
+        std::cout << "Creating NLLB model with languages: " << sourceLanguage
                   << " -> " << targetLanguage << std::endl;
         try {
             return std::make_shared<NLLBModel>(modelInfo, sourceLanguage, targetLanguage, config);
@@ -159,7 +159,7 @@ std::shared_ptr<LLMModel> LLMManager::createModel(const translation::ModelInfo& 
             return nullptr;
         }
     }
-    
+
     // For all other model types, create a basic LLMModel
     try {
         return std::make_shared<LLMModel>(modelInfo, config);
@@ -170,4 +170,4 @@ std::shared_ptr<LLMModel> LLMManager::createModel(const translation::ModelInfo& 
 }
 
 } // namespace llm
-} // namespace koebridge 
+} // namespace koebridge
