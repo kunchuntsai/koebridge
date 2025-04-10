@@ -17,28 +17,49 @@ namespace translation {
 
 ModelManager::ModelManager(const std::string& modelPath) 
     : modelPath_(modelPath.empty() ? getModelPathFromConfig() : modelPath)
-    , modelLoaded_(false) {
+    , modelLoaded_(false)
+    , shouldStop_(false) {
 }
 
 ModelManager::~ModelManager() {
+    // Signal worker thread to stop
+    {
+        std::lock_guard<std::mutex> lock(queueMutex_);
+        shouldStop_ = true;
+    }
+    queueCV_.notify_one();
+    
+    // Wait for worker thread to finish
+    if (workerThread_.joinable()) {
+        workerThread_.join();
+    }
+    
     unloadCurrentModel();
 }
 
 bool ModelManager::initialize() {
+    // Start worker thread for async translations
+    workerThread_ = std::thread(&ModelManager::processTranslationQueue, this);
+    
     // Scan for available models
     scanForModels();
     return true;
 }
 
 std::vector<ModelInfo> ModelManager::getAvailableModels() const {
+    std::lock_guard<std::mutex> lock(modelsMutex_);
     return models_;
 }
 
 ModelInfo ModelManager::getActiveModel() const {
+    std::lock_guard<std::mutex> lock(modelMutex_);
     return activeModel_;
 }
 
 bool ModelManager::loadModel(const std::string& modelId) {
+    std::lock_guard<std::mutex> modelsLock(modelsMutex_);
+    std::lock_guard<std::mutex> modelLock(modelMutex_);
+    
     // Check if this model is already loaded
     if (modelLoaded_ && activeModel_.id == modelId) {
         return true;
@@ -73,6 +94,7 @@ bool ModelManager::loadModel(const std::string& modelId) {
 }
 
 bool ModelManager::unloadModel() {
+    std::lock_guard<std::mutex> modelLock(modelMutex_);
     if (!modelLoaded_) {
         return true;  // Nothing to unload
     }
@@ -82,6 +104,7 @@ bool ModelManager::unloadModel() {
 }
 
 bool ModelManager::isModelLoaded() const {
+    std::lock_guard<std::mutex> lock(modelMutex_);
     return modelLoaded_;
 }
 
@@ -108,11 +131,96 @@ void ModelManager::unloadCurrentModel() {
 }
 
 std::shared_ptr<ITranslationModel> ModelManager::getTranslationModel() {
+    std::lock_guard<std::mutex> lock(modelMutex_);
     if (!modelLoaded_) {
         return nullptr;
     }
     
     return translationModel_;
+}
+
+TranslationResult ModelManager::translate(const std::string& text, const TranslationOptions& options) {
+    std::lock_guard<std::mutex> lock(modelMutex_);
+    if (!modelLoaded_ || !translationModel_) {
+        TranslationResult result;
+        result.success = false;
+        result.errorMessage = "No model loaded";
+        return result;
+    }
+    
+    return translationModel_->translate(text, options);
+}
+
+std::future<TranslationResult> ModelManager::translateAsync(
+    const std::string& text,
+    const TranslationOptions& options,
+    ProgressCallback progressCallback
+) {
+    return queueTranslation(text, options, progressCallback);
+}
+
+void ModelManager::processTranslationQueue() {
+    while (true) {
+        std::function<void()> task;
+        
+        {
+            std::unique_lock<std::mutex> lock(queueMutex_);
+            queueCV_.wait(lock, [this] { 
+                return !translationQueue_.empty() || shouldStop_; 
+            });
+            
+            if (shouldStop_ && translationQueue_.empty()) {
+                break;
+            }
+            
+            if (!translationQueue_.empty()) {
+                task = std::move(translationQueue_.front());
+                translationQueue_.pop();
+            }
+        }
+        
+        if (task) {
+            task();
+        }
+    }
+}
+
+std::future<TranslationResult> ModelManager::queueTranslation(
+    const std::string& text,
+    const TranslationOptions& options,
+    ProgressCallback progressCallback
+) {
+    auto promise = std::make_shared<std::promise<TranslationResult>>();
+    auto future = promise->get_future();
+    
+    auto task = [this, text, options, progressCallback, promise]() {
+        try {
+            if (progressCallback) {
+                progressCallback(0, "Starting translation");
+            }
+            
+            auto result = translate(text, options);
+            
+            if (progressCallback) {
+                progressCallback(100, "Translation completed");
+            }
+            
+            promise->set_value(std::move(result));
+        } catch (const std::exception& e) {
+            TranslationResult errorResult;
+            errorResult.success = false;
+            errorResult.errorMessage = std::string("Translation error: ") + e.what();
+            promise->set_value(std::move(errorResult));
+        }
+    };
+    
+    {
+        std::lock_guard<std::mutex> lock(queueMutex_);
+        translationQueue_.push(std::move(task));
+    }
+    queueCV_.notify_one();
+    
+    return future;
 }
 
 std::string ModelManager::getModelPathFromConfig() const {
@@ -132,28 +240,25 @@ std::string ModelManager::getModelPathFromConfig() const {
 }
 
 void ModelManager::scanForModels() {
+    std::lock_guard<std::mutex> lock(modelsMutex_);
     models_.clear();
     
-    QDir dir(QString::fromStdString(modelPath_));
-    if (!dir.exists()) {
+    QDir modelDir(QString::fromStdString(modelPath_));
+    if (!modelDir.exists()) {
         LOG_ERROR("Model directory does not exist: " + modelPath_);
         return;
     }
     
-    // Scan directory for model files
-    const auto entries = dir.entryInfoList(QDir::Files | QDir::Readable, QDir::Name);
-    LOG_INFO("Found " + std::to_string(entries.size()) + " files in model directory");
-    
-    for (const auto& entry : entries) {
-        // Filter for model files
-        if (entry.suffix() == "bin" || entry.suffix() == "ggml" || entry.suffix() == "gguf") {
+    QFileInfoList files = modelDir.entryInfoList(QDir::Files | QDir::NoDotAndDotDot);
+    for (const QFileInfo& file : files) {
+        if (file.suffix() == "bin" || file.suffix() == "ggml") {
             ModelInfo info;
-            info.id = entry.baseName().toStdString();
-            info.path = entry.filePath().toStdString();
-            info.size = entry.size();
-            info.lastModified = static_cast<std::time_t>(entry.lastModified().toSecsSinceEpoch());
+            info.id = file.baseName().toStdString();
+            info.path = file.absoluteFilePath().toStdString();
+            info.size = file.size();
+            info.lastModified = file.lastModified().toSecsSinceEpoch();
             
-            // Set model capabilities based on file name
+            // Detect model type and capabilities
             if (info.id.find("nllb") != std::string::npos) {
                 info.capabilities.push_back("translation");
                 info.modelType = "nllb";
