@@ -38,15 +38,20 @@ public:
             return true;
         }
 
+        LOG_INFO("Starting model initialization...");
+
         // Initialize GGML context with appropriate size
+        LOG_INFO("Initializing GGML context (1GB)...");
         const size_t ctxSize = 1024 * 1024 * 1024; // 1GB initial size
         ctx_ = ggml_init({ctxSize, nullptr, false});
         if (!ctx_) {
             LOG_ERROR("Failed to initialize GGML context");
             return false;
         }
+        LOG_INFO("GGML context initialized successfully");
 
         // Load model file
+        LOG_INFO("Opening model file: " + modelPath);
         std::ifstream file(modelPath, std::ios::binary);
         if (!file) {
             LOG_ERROR("Failed to open model file: " + modelPath);
@@ -56,14 +61,17 @@ public:
 
         try {
             // Read and validate model header
+            LOG_INFO("Reading model header...");
             uint32_t magic;
             file.read(reinterpret_cast<char*>(&magic), sizeof(magic));
             if (magic != 0x67676D6C) { // "ggml" in hex
                 LOG_ERROR("Invalid model file format");
                 return false;
             }
+            LOG_INFO("Model header validated");
 
             // Read model version and parameters
+            LOG_INFO("Reading model architecture...");
             uint32_t version;
             file.read(reinterpret_cast<char*>(&version), sizeof(version));
 
@@ -74,31 +82,43 @@ public:
             file.read(reinterpret_cast<char*>(&n_embd), sizeof(n_embd));
             file.read(reinterpret_cast<char*>(&vocab_size), sizeof(vocab_size));
 
-            LOG_INFO("Loading model with parameters: layers=" + std::to_string(n_layers) +
-                    ", heads=" + std::to_string(n_heads) +
-                    ", embd=" + std::to_string(n_embd) +
-                    ", vocab_size=" + std::to_string(vocab_size));
+            std::string archInfo = std::string("Model architecture:\n") +
+                "  - Version: " + std::to_string(version) + "\n" +
+                "  - Layers: " + std::to_string(n_layers) + "\n" +
+                "  - Heads: " + std::to_string(n_heads) + "\n" +
+                "  - Embedding size: " + std::to_string(n_embd) + "\n" +
+                "  - Vocabulary size: " + std::to_string(vocab_size);
+            LOG_INFO(archInfo);
 
             // Allocate model tensors
+            LOG_INFO("Allocating model tensors...");
             model_ = ggml_new_tensor_3d(ctx_, GGML_TYPE_F32, n_embd, n_heads, n_layers);
             if (!model_) {
                 LOG_ERROR("Failed to allocate model tensor");
                 return false;
             }
+            LOG_INFO("Model tensors allocated");
 
             // Load model weights
+            LOG_INFO("Loading model weights...");
             size_t weightsSize = ggml_nbytes(model_);
+            LOG_INFO("Model size: " + std::to_string(weightsSize / 1024 / 1024) + " MB");
+
             std::vector<uint8_t> weights(weightsSize);
             file.read(reinterpret_cast<char*>(weights.data()), weightsSize);
             if (file.gcount() != static_cast<std::streamsize>(weightsSize)) {
                 LOG_ERROR("Failed to read model weights");
                 return false;
             }
+            LOG_INFO("Model weights loaded successfully");
 
             // Copy weights to tensor
+            LOG_INFO("Copying weights to tensor...");
             memcpy(ggml_get_data(model_), weights.data(), weightsSize);
+            LOG_INFO("Weights copied successfully");
 
             // Load vocabulary
+            LOG_INFO("Loading vocabulary (" + std::to_string(vocab_size) + " tokens)...");
             vocab_.resize(vocab_size);
             for (size_t i = 0; i < vocab_size; ++i) {
                 uint32_t tokenLength;
@@ -107,10 +127,15 @@ public:
                 std::string token(tokenLength, '\0');
                 file.read(&token[0], tokenLength);
                 vocab_[i] = token;
+
+                if (i % 10000 == 0) {
+                    LOG_INFO("Loaded " + std::to_string(i) + "/" + std::to_string(vocab_size) + " tokens");
+                }
             }
+            LOG_INFO("Vocabulary loaded successfully");
 
             initialized_ = true;
-            LOG_INFO("Model initialized successfully");
+            LOG_INFO("Model initialization completed successfully");
             return true;
 
         } catch (const std::exception& e) {

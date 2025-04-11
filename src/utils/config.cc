@@ -6,6 +6,9 @@
 #include <stdexcept>
 #include <iostream>
 #include <algorithm>
+#include <QDir>
+#include <cctype>
+#include <regex>
 
 namespace koebridge {
 namespace utils {
@@ -26,71 +29,93 @@ Config& Config::getInstance() {
     return instance;
 }
 
-bool Config::load(const std::string& configPath) {
-    std::ifstream file(configPath);
+bool Config::load(const std::string& filePath) {
+    std::ifstream file(filePath);
     if (!file.is_open()) {
-        LOG_ERROR("Failed to open config file: " + configPath);
+        Logger::getInstance().error("Failed to open config file: " + filePath);
         return false;
     }
 
-    LOG_INFO("Loading configuration from: " + configPath);
     std::string line;
-    int lineNumber = 0;
-
-    // Clear existing configuration
-    configData.clear();
-    LOG_DEBUG("Cleared existing configuration");
+    std::string currentSection;
+    std::regex sectionRegex("^\\[(.*)\\]$");
+    std::regex keyValueRegex("^([^=]+)=(.*)$");
+    std::smatch matches;
 
     while (std::getline(file, line)) {
-        lineNumber++;
-        line = trim(line);
-
         // Skip empty lines and comments
-        if (line.empty() || line[0] == '#') {
-            LOG_DEBUG("Line " + std::to_string(lineNumber) + ": Skipping " +
-                     (line.empty() ? "empty line" : "comment"));
+        if (line.empty() || line[0] == ';' || line[0] == '#') {
             continue;
         }
 
-        // Parse key-value pairs
-        size_t pos = line.find('=');
-        if (pos != std::string::npos) {
-            std::string key = trim(line.substr(0, pos));
-            std::string value = trim(line.substr(pos + 1));
+        // Check for section
+        if (std::regex_match(line, matches, sectionRegex)) {
+            currentSection = matches[1].str();
+            continue;
+        }
 
-            if (!key.empty()) {
-                configData[key] = value;
-                LOG_DEBUG("Line " + std::to_string(lineNumber) + ": Loaded config - " + key + " = " + value);
-            } else {
-                LOG_WARNING("Line " + std::to_string(lineNumber) + ": Empty key found, skipping");
+        // Check for key-value pair
+        if (std::regex_match(line, matches, keyValueRegex)) {
+            std::string key = matches[1].str();
+            std::string value = matches[2].str();
+
+            // Trim whitespace
+            key = std::regex_replace(key, std::regex("^\\s+|\\s+$"), "");
+            value = std::regex_replace(value, std::regex("^\\s+|\\s+$"), "");
+
+            // Create full key with section
+            std::string fullKey = currentSection.empty() ? key : currentSection + "." + key;
+
+            // Store the value
+            configData[fullKey] = value;
+
+            // Debug output for model path
+            if (fullKey == "translation.model_path") {
+                Logger::getInstance().info("Model path from config: " + value);
+                // Expand path if needed
+                std::string expandedPath = expandPath(value);
+                Logger::getInstance().info("Expanded model path: " + expandedPath);
             }
-        } else {
-            LOG_WARNING("Line " + std::to_string(lineNumber) + ": Invalid format (no '=' found): " + line);
         }
     }
 
-    LOG_INFO("Configuration loaded successfully with " + std::to_string(configData.size()) + " entries");
-
-    // Log all loaded configuration entries
-    LOG_INFO("=== Configuration Content ===");
-    for (const auto& [key, value] : configData) {
-        LOG_INFO(key + " = " + value);
-    }
-    LOG_INFO("==========================");
-
+    Logger::getInstance().info("Loaded configuration from: " + filePath);
     return true;
 }
 
 bool Config::save(const std::string& filePath) {
     std::ofstream file(filePath);
     if (!file.is_open()) {
+        Logger::getInstance().error("Failed to open config file for writing: " + filePath);
         return false;
     }
 
-    for (const auto& pair : configData) {
-        file << pair.first << " = " << pair.second << std::endl;
+    std::map<std::string, std::vector<std::pair<std::string, std::string>>> sections;
+
+    // Group settings by section
+    for (const auto& [key, value] : configData) {
+        size_t dotPos = key.find('.');
+        if (dotPos != std::string::npos) {
+            std::string section = key.substr(0, dotPos);
+            std::string setting = key.substr(dotPos + 1);
+            sections[section].emplace_back(setting, value);
+        } else {
+            sections[""].emplace_back(key, value);
+        }
     }
 
+    // Write settings grouped by section
+    for (const auto& [section, settings] : sections) {
+        if (!section.empty()) {
+            file << "[" << section << "]\n";
+        }
+        for (const auto& [key, value] : settings) {
+            file << key << "=" << value << "\n";
+        }
+        file << "\n";
+    }
+
+    Logger::getInstance().info("Saved configuration to: " + filePath);
     return true;
 }
 
@@ -108,7 +133,25 @@ std::string Config::getPath(const std::string& key) {
     }
 
     std::string expandedPath = expandPath(it->second);
-    LOG_DEBUG("Retrieved path for " + key + ": " + expandedPath);
+
+    // Validate path exists and is accessible
+    QDir dir(QString::fromStdString(expandedPath));
+    if (!dir.exists()) {
+        LOG_ERROR("Path does not exist: " + expandedPath);
+        throw std::runtime_error("Path does not exist: " + expandedPath);
+    }
+
+    if (!dir.isReadable()) {
+        LOG_ERROR("Path is not readable: " + expandedPath);
+        throw std::runtime_error("Path is not readable: " + expandedPath);
+    }
+
+    if (key.find("model") != std::string::npos) {
+        std::string modelName = expandedPath.substr(expandedPath.find_last_of("/\\") + 1);
+        LOG_DEBUG("Retrieved path for " + key + ": " + expandedPath + " (Model: " + modelName + ")");
+    } else {
+        LOG_DEBUG("Retrieved path for " + key + ": " + expandedPath);
+    }
     return expandedPath;
 }
 
@@ -166,10 +209,6 @@ void Config::setBool(const std::string& key, bool value) {
 }
 
 std::string Config::expandPath(const std::string& path) const {
-    if (path.empty()) {
-        return path;
-    }
-
     std::string result = path;
 
     // Expand home directory
@@ -177,26 +216,24 @@ std::string Config::expandPath(const std::string& path) const {
         const char* home = std::getenv("HOME");
         if (home) {
             result.replace(0, 1, home);
-        } else {
-            throw std::runtime_error("HOME environment variable not set");
         }
     }
 
     // Expand environment variables
-    size_t pos = 0;
-    while ((pos = result.find("${", pos)) != std::string::npos) {
-        size_t end = result.find("}", pos);
-        if (end == std::string::npos) {
-            break;
-        }
+    std::regex envVarRegex("\\$\\{([^}]+)\\}");
+    std::smatch matches;
+    std::string::const_iterator searchStart(result.cbegin());
 
-        std::string var = result.substr(pos + 2, end - pos - 2);
-        const char* value = std::getenv(var.c_str());
-
-        if (value) {
-            result.replace(pos, end - pos + 1, value);
+    while (std::regex_search(searchStart, result.cend(), matches, envVarRegex)) {
+        std::string envVar = matches[1].str();
+        const char* envValue = std::getenv(envVar.c_str());
+        if (envValue) {
+            result.replace(matches[0].first - result.begin(),
+                         matches[0].length(),
+                         envValue);
+            searchStart = result.cbegin() + (matches[0].first - result.begin() + strlen(envValue));
         } else {
-            throw std::runtime_error("Environment variable not set: " + var);
+            searchStart = matches[0].second;
         }
     }
 

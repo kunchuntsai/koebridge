@@ -13,9 +13,11 @@ NC='\033[0m' # No Color
 
 echo -e "${YELLOW}Starting trailing space removal...${NC}"
 
-# Counter for processed files
-processed=0
-modified=0
+# Create temporary files to store counts
+processed_file=$(mktemp)
+modified_file=$(mktemp)
+echo "0" > "$processed_file"
+echo "0" > "$modified_file"
 
 # Find all relevant files and process them
 find . -type f \
@@ -31,25 +33,38 @@ find . -type f \
         continue
     fi
     
+    # Increment processed count
+    processed=$(cat "$processed_file")
     processed=$((processed + 1))
+    echo "$processed" > "$processed_file"
     
-    # Create a backup of the original file
-    # cp "$file" "${file}.bak"
+    # Create a temporary file
+    temp_file=$(mktemp)
+    cp "$file" "$temp_file"
     
     # Remove trailing spaces
     if sed -i '' 's/ *$//' "$file" 2>/dev/null; then
         # Check if the file was actually modified
-        if ! cmp -s "$file" "${file}.bak"; then
+        if ! cmp -s "$file" "$temp_file"; then
+            modified=$(cat "$modified_file")
             modified=$((modified + 1))
+            echo "$modified" > "$modified_file"
             echo -e "${GREEN}Modified:${NC} $file"
-        else
-            rm "${file}.bak"
         fi
     else
         echo -e "${RED}Error processing:${NC} $file"
-        rm "${file}.bak"
     fi
+    
+    # Clean up temporary file
+    rm "$temp_file"
 done
+
+# Read final counts
+processed=$(cat "$processed_file")
+modified=$(cat "$modified_file")
+
+# Clean up temporary count files
+rm "$processed_file" "$modified_file"
 
 echo -e "\n${YELLOW}Summary:${NC}"
 echo -e "Total files processed: $processed"

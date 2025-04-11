@@ -81,8 +81,9 @@ private:
 
     /**
      * @brief Scan the model directory for available models
+     * @return bool True if scan was successful
      */
-    void scanForModels();
+    bool scanForModels();
 
     /**
      * @brief Unload the current model (internal implementation)
@@ -107,20 +108,19 @@ private:
         ProgressCallback progressCallback
     );
 
-    std::string modelPath_;           ///< Path to model directory
-    std::vector<ModelInfo> models_;   ///< List of available models
-    ModelInfo activeModel_;           ///< Currently active model
-    bool modelLoaded_;                ///< Flag indicating if a model is loaded
-    std::shared_ptr<ITranslationModel> translationModel_; ///< The currently loaded translation model
-
-    // Thread safety and async processing
-    mutable std::mutex modelsMutex_;  ///< Mutex for protecting models_ vector
-    mutable std::mutex modelMutex_;   ///< Mutex for protecting active model
-    std::mutex queueMutex_;          ///< Mutex for protecting translation queue
-    std::condition_variable queueCV_; ///< Condition variable for translation queue
+    std::string modelPath_;                    ///< Path to the model directory
+    bool initialized_ = false;                 ///< Initialization state
+    bool modelLoaded_ = false;                 ///< Model loading state
+    std::vector<ModelInfo> availableModels_;   ///< List of available models
+    ModelInfo activeModel_;                    ///< Currently active model
+    std::shared_ptr<ITranslationModel> model_; ///< Currently loaded model
+    mutable std::mutex modelMutex_;            ///< Mutex for model operations
+    mutable std::mutex modelsMutex_;           ///< Mutex for available models list
+    mutable std::mutex queueMutex_;            ///< Mutex for translation queue
+    std::condition_variable queueCV_;          ///< Condition variable for queue processing
     std::queue<std::function<void()>> translationQueue_; ///< Queue of translation tasks
-    std::thread workerThread_;       ///< Worker thread for processing translations
-    bool shouldStop_;                ///< Flag to signal worker thread to stop
+    std::thread workerThread_;                 ///< Worker thread for processing queue
+    bool shouldStop_ = false;                  ///< Flag to signal worker thread to stop
 };
 
 } // namespace translation

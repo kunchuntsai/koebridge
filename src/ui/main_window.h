@@ -85,6 +85,8 @@ private:
      */
     void saveSettings();
 
+    void applyConfigSettings(const koebridge::utils::Config& config);
+
     TranslationView* translationView; ///< Main translation view widget
     SettingsDialog* settingsDialog;    ///< Settings dialog widget
     QSettings settings;                ///< Application settings
@@ -97,4 +99,36 @@ private:
     QAction* stopAct;       ///< Stop translation action
     QAction* settingsAct;   ///< Show settings action
     QAction* exitAct;       ///< Exit application action
+
+    void updateTranslatedText(const QString& text);
+    void setupConnections();
+    void setupMenuBar();
+    void setupStatusBar();
+    void setupCentralWidget();
+    void setupTranslationView();
+    void setupSettingsDialog();
+    void setupAudioCapture();
+    void setupTranslationService();
+    void setupModelManager();
+    void setupRealtimeTranscriber();
+    void setupWhisperWrapper();
+    void setupLLMManager();
+    void setupLLMModel();
+    void setupNLLBModel();
+    void setupGGMLModel();
+    void setupInferenceEngine();
+    void setupTransformer();
+    void setupLogger();
+    void setupConfig();
+    void setupUtils();
+    void setupInterfaces();
+    void setupModels();
+    void setupTranslation();
+    void setupAudio();
+    void setupSTT();
+    void setupLLM();
+    void setupInference();
+    void setupUI();
+    void setupCore();
+    void setupAll();
 };

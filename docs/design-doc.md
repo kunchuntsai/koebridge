@@ -9,9 +9,10 @@
   - [2.1 High-Level Architecture](#21-high-level-architecture)
   - [2.2 LLM Component Building Blocks](#22-llm-component-building-blocks)
 - [3. Pipeline and Workflows](#3-pipeline-and-workflows)
-  - [3.1 Translation Pipeline](#31-translation-pipeline)
-  - [3.2 Model Loading Workflow](#32-model-loading-workflow)
-  - [3.3 Translation Request Workflow](#33-translation-request-workflow)
+  - [3.1 End-to-End Data Flow](#31-end-to-end-data-flow)
+  - [3.2 Translation Pipeline](#32-translation-pipeline)
+  - [3.3 Model Loading Workflow](#33-model-loading-workflow)
+  - [3.4 Translation Request Workflow](#34-translation-request-workflow)
 - [4. Interfaces and Data Structures](#4-interfaces-and-data-structures)
   - [4.1 Core Interfaces](#41-core-interfaces)
   - [4.2 Key Data Structures](#42-key-data-structures)
@@ -20,8 +21,7 @@
   - [5.2 Translation Procedure](#52-translation-procedure)
   - [5.3 Error Handling Procedure](#53-error-handling-procedure)
 - [6. Implementation - Code Design](#6-implementation---code-design)
-  - [6.1 Core Implementation Classes](#61-core-implementation-classes)
-  - [6.2 Implementation Considerations](#62-implementation-considerations)
+  - [6.1 Implementation Considerations](#61-implementation-considerations)
 - [7. Verification - Test Cases](#7-verification---test-cases)
   - [7.1 Unit Tests](#71-unit-tests)
   - [7.2 Integration Tests](#72-integration-tests)
@@ -146,7 +146,34 @@ Handles model files:
 
 ## 3. Pipeline and Workflows
 
-### 3.1 Translation Pipeline
+### 3.1 End-to-End Data Flow
+
+```
+[Audio Source]
+    ↓
+[Audio Capture Module]
+    - Input: Raw audio from device (16kHz, mono)
+    - Output: Float array audio data
+    ↓
+[Speech-to-Text (Whisper)]
+    - Input: Float array audio data
+    - Output: Japanese text with timestamps
+    ↓
+[Translation Engine]
+    - Input: Japanese text
+    - Processing:
+        1. Text normalization
+        2. Context management
+        3. Model inference (Local LLM)
+        4. Post-processing
+    - Output: English text
+    ↓
+[UI Module]
+    - Input: Both Japanese and English text
+    - Output: Display updates, user interactions
+```
+
+### 3.2 Translation Pipeline
 
 ```
 ┌────────────┐    ┌────────────┐    ┌────────────┐    ┌────────────┐
@@ -164,7 +191,7 @@ Handles model files:
                   └────────────┘    └────────────┘    └────────────┘
 ```
 
-### 3.2 Model Loading Workflow
+### 3.3 Model Loading Workflow
 
 ```
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
@@ -182,7 +209,7 @@ Handles model files:
 └─────────────┘                      └─────────────┘
 ```
 
-### 3.3 Translation Request Workflow
+### 3.4 Translation Request Workflow
 
 ```
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
@@ -198,6 +225,35 @@ Handles model files:
 │ Signal      │    │ Rules       │    │ Inference   │
 └─────────────┘    └─────────────┘    └─────────────┘
 ```
+
+#### 3.4.1 Module Characteristics
+
+1. **Audio Capture Module** (100% complete):
+   - Uses PortAudio for device management
+   - Configurable sample rate (default 16kHz)
+   - Single channel audio capture
+   - Real-time buffer processing
+
+2. **Speech-to-Text Module** (90% complete):
+   - Uses Whisper model
+   - Real-time transcription
+   - Provides timestamps and metadata
+   - Handles memory management and optimization
+
+3. **Translation Engine** (100% complete):
+   - Model Manager handles model lifecycle
+   - Local LLM performs the actual translation
+   - Supports asynchronous processing
+   - Includes pre/post-processing steps
+   - Handles multiple language pairs
+
+4. **UI Module** (60% complete):
+   - Displays both source and translated text
+   - Handles user settings and configuration
+   - Manages audio device selection
+   - Provides translation control interface
+
+The system operates in real-time with asynchronous processing to maintain responsiveness. While the primary data flow is unidirectional (audio → text → translation → display), the UI module can send control commands back through the system for configuration changes and translation control.
 
 ## 4. Interfaces and Data Structures
 
@@ -393,118 +449,9 @@ struct TranslationResult {
 
 ## 6. Implementation - Code Design
 
-### 6.1 Core Implementation Classes
+### 6.1 Implementation Considerations
 
-#### 6.1.1 Model Manager Implementation
-
-```cpp
-// model_manager.h
-class ModelManager : public IModelManager {
-public:
-    ModelManager(const std::string& modelDir);
-    ~ModelManager() override;
-
-    std::vector<ModelInfo> getAvailableModels() const override;
-    ModelInfo getActiveModel() const override;
-
-    bool loadModel(const std::string& modelId) override;
-    void unloadCurrentModel() override;
-    bool isModelLoaded() const override;
-
-    std::shared_ptr<ITranslationModel> getTranslationModel() override;
-    bool downloadModel(const std::string& modelId, ProgressCallback callback) override;
-
-private:
-    std::string modelDir_;
-    std::vector<ModelInfo> availableModels_;
-    std::shared_ptr<ITranslationModel> currentModel_;
-    ModelInfo activeModelInfo_;
-
-    void scanAvailableModels();
-    std::shared_ptr<ITranslationModel> createModelInstance(const ModelInfo& info);
-};
-```
-
-#### 6.1.2 GGML Model Implementation
-
-```cpp
-// ggml_model.h
-class GGMLModel : public ITranslationModel {
-public:
-    GGMLModel(const ModelInfo& modelInfo);
-    ~GGMLModel() override;
-
-    bool initialize() override;
-    bool isInitialized() const override;
-
-    TranslationResult translate(const std::string& text, const TranslationOptions& options) override;
-    std::future<TranslationResult> translateAsync(const std::string& text, const TranslationOptions& options) override;
-
-    ModelInfo getModelInfo() const override;
-    InferenceStats getLastInferenceStats() const override;
-
-private:
-    ModelInfo modelInfo_;
-    bool initialized_ = false;
-    InferenceStats lastStats_;
-
-    // GGML specific members
-    void* model_ = nullptr;
-    void* ctx_ = nullptr;
-
-    // Thread pool for async operations
-    std::shared_ptr<ThreadPool> threadPool_;
-
-    // Internal methods
-    void tokenize(const std::string& text, std::vector<int>& tokens);
-    std::string detokenize(const std::vector<int>& tokens);
-    void runInference(const std::vector<int>& inputTokens, std::vector<int>& outputTokens, const TranslationOptions& options);
-};
-```
-
-#### 6.1.3 Translation Service Implementation
-
-```cpp
-// translation_service.h
-class TranslationService : public QObject, public ITranslationService {
-    Q_OBJECT
-
-public:
-    TranslationService(std::shared_ptr<IModelManager> modelManager);
-    ~TranslationService() override;
-
-    bool initialize() override;
-    void shutdown() override;
-
-    std::string translateText(const std::string& japaneseText) override;
-    void translateTextAsync(const std::string& japaneseText, TranslationCallback callback) override;
-
-    void setTranslationOptions(const TranslationOptions& options) override;
-    TranslationOptions getTranslationOptions() const override;
-
-signals:
-    void translationComplete(const std::string& sourceText, const std::string& translatedText);
-    void translationError(const std::string& sourceText, const std::string& errorMessage);
-    void translationProgress(int percentComplete);
-
-private:
-    std::shared_ptr<IModelManager> modelManager_;
-    TranslationOptions options_;
-    std::atomic<bool> initialized_ = false;
-
-    // Worker thread and queue
-    std::unique_ptr<QThread> workerThread_;
-    std::unique_ptr<TranslationWorker> worker_;
-
-    // Helper methods
-    std::string preprocess(const std::string& text);
-    std::string postprocess(const std::string& text);
-};
-```
-
-### 6.2 Implementation Considerations
-
-#### 6.2.1 Memory Management
+#### 6.1.1 Memory Management
 
 - **Memory Mapping**: Use memory mapping for large model files
 - **Quantization**: Support INT8 and INT4 quantized models

@@ -113,20 +113,25 @@ void MainWindow::loadSettings() {
     restoreGeometry(settings.value("window/geometry").toByteArray());
     restoreState(settings.value("window/state").toByteArray());
 
-    // Load other settings from Config singleton
+    // Get configuration from singleton (already loaded)
     auto& config = koebridge::utils::Config::getInstance();
-    if (!config.load(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation).toStdString() + "/config.ini")) {
-        // If no config file exists, try to load from default locations
-        std::vector<std::string> configPaths = {
-            "config/config.ini",
-            "config/default_settings.json"
-        };
-        for (const auto& path : configPaths) {
-            if (config.load(path)) {
-                break;
-            }
+
+    // Apply settings from config
+    applyConfigSettings(config);
+}
+
+void MainWindow::applyConfigSettings(const koebridge::utils::Config& config) {
+    // Apply model path setting
+    QString modelPath = QString::fromStdString(config.getString("translation.model_path"));
+    if (!modelPath.isEmpty()) {
+        // Update UI elements with model path
+        if (translationView) {
+            translationView->setModelPath(modelPath);
         }
     }
+
+    // Apply other settings as needed
+    // ...
 }
 
 void MainWindow::saveSettings() {

@@ -157,6 +157,9 @@ For detailed information about the test suite, writing tests, and test structure
 ## Project Structure
 
 ```
+_dataset/
+└── models/               # Models
+    └── nllb-200-distilled-600m-ja-en.bin
 koebridge/
 ├── src/                  # Source code
 │   ├── audio/            # Audio capture module

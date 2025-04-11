@@ -4,22 +4,22 @@
  */
 
 #include "translation/model_manager.h"
-#include "utils/config.h"
 #include "utils/logger.h"
 #include "models/ggml_model.h"
 #include <QDir>
 #include <QFileInfo>
 #include <QStandardPaths>
 #include <iostream>
+#include <fstream>
 
 namespace koebridge {
 namespace translation {
 
 ModelManager::ModelManager(const std::string& modelPath)
-    : modelPath_(modelPath.empty() ? getModelPathFromConfig() : modelPath)
+    : modelPath_(modelPath)
     , modelLoaded_(false)
     , shouldStop_(false) {
-    // Model path is already set from getModelPathFromConfig() or the provided path
+    // Model path is provided by the caller
 }
 
 ModelManager::~ModelManager() {
@@ -39,32 +39,50 @@ ModelManager::~ModelManager() {
 }
 
 bool ModelManager::initialize() {
-    // Start worker thread for async translations
-    workerThread_ = std::thread(&ModelManager::processTranslationQueue, this);
-
-    // Scan for available models
-    scanForModels();
-
-    // Try to load default model if specified
-    std::string defaultModel = utils::Config::getInstance().getString("translation.default_model", "");
-    if (!defaultModel.empty()) {
-        if (!loadModel(defaultModel)) {
-            LOG_WARNING("Failed to load default model: " + defaultModel);
-        } else {
-            LOG_INFO("Loaded default model: " + defaultModel);
-        }
+    if (initialized_) {
+        return true;
     }
 
+    if (modelPath_.empty()) {
+        utils::Logger::getInstance().error("Model path is empty");
+        return false;
+    }
+
+    utils::Logger::getInstance().info("Initializing model manager with path: " + modelPath_);
+
+    // Scan for available models
+    if (!scanForModels()) {
+        utils::Logger::getInstance().error("Failed to scan for models");
+        return false;
+    }
+
+    // Try to load a model
+    if (!availableModels_.empty()) {
+        utils::Logger::getInstance().info("Attempting to load a model: " + availableModels_[0].id);
+        if (!loadModel(availableModels_[0].id)) {
+            utils::Logger::getInstance().warning("Failed to load a model: " + availableModels_[0].id);
+            return false;
+        }
+        utils::Logger::getInstance().info("Successfully loaded a model: " + availableModels_[0].id);
+    } else {
+        utils::Logger::getInstance().warning("No models found in path: " + modelPath_);
+        return false;
+    }
+
+    initialized_ = true;
     return true;
 }
 
 std::vector<ModelInfo> ModelManager::getAvailableModels() const {
-    std::lock_guard<std::mutex> lock(modelsMutex_);
-    return models_;
+    std::lock_guard<std::mutex> lock(queueMutex_);
+    return availableModels_;
 }
 
 ModelInfo ModelManager::getActiveModel() const {
-    std::lock_guard<std::mutex> lock(modelMutex_);
+    std::lock_guard<std::mutex> lock(queueMutex_);
+    if (!modelLoaded_) {
+        return ModelInfo{};
+    }
     return activeModel_;
 }
 
@@ -78,35 +96,39 @@ bool ModelManager::loadModel(const std::string& modelId) {
     }
 
     // Find the model in the available models list
-    for (const auto& model : models_) {
+    for (const auto& model : availableModels_) {
         if (model.id == modelId) {
             // Unload current model if any
             if (modelLoaded_) {
                 unloadModel();
             }
 
+            utils::Logger::getInstance().info("Creating GGML model for: " + modelId);
+
             // Create and initialize the GGML model
-            translationModel_ = std::make_shared<models::GGMLModel>(model);
-            if (!translationModel_->initialize()) {
-                LOG_ERROR("Failed to initialize model: " + modelId);
-                translationModel_.reset();
+            model_ = std::make_shared<models::GGMLModel>(model);
+
+            utils::Logger::getInstance().info("Starting model initialization for: " + modelId);
+            if (!model_->initialize()) {
+                utils::Logger::getInstance().error("Failed to initialize model: " + modelId);
+                model_.reset();
                 return false;
             }
 
             // Update model info
             activeModel_ = model;
             modelLoaded_ = true;
-            LOG_INFO("Successfully loaded model: " + modelId);
+            utils::Logger::getInstance().info("Successfully loaded model: " + modelId);
             return true;
         }
     }
 
-    LOG_ERROR("Model not found: " + modelId);
+    utils::Logger::getInstance().error("Model not found: " + modelId);
     return false;
 }
 
 bool ModelManager::unloadModel() {
-    std::lock_guard<std::mutex> modelLock(modelMutex_);
+    std::lock_guard<std::mutex> lock(queueMutex_);
     if (!modelLoaded_) {
         return true;  // Nothing to unload
     }
@@ -116,13 +138,20 @@ bool ModelManager::unloadModel() {
 }
 
 bool ModelManager::isModelLoaded() const {
-    std::lock_guard<std::mutex> lock(modelMutex_);
+    std::lock_guard<std::mutex> lock(queueMutex_);
     return modelLoaded_;
 }
 
 bool ModelManager::downloadModel(const std::string& modelId, ProgressCallback callback) {
-    // Check if model already exists in the configured path
     QDir modelDir(QString::fromStdString(modelPath_));
+    if (!modelDir.exists()) {
+        if (callback) {
+            callback(0, "Model directory does not exist: " + modelPath_);
+        }
+        utils::Logger::getInstance().error("Model directory does not exist: " + modelPath_);
+        return false;
+    }
+
     QString modelPath = modelDir.filePath(QString::fromStdString(modelId + ".bin"));
     QFileInfo modelFile(modelPath);
 
@@ -130,43 +159,43 @@ bool ModelManager::downloadModel(const std::string& modelId, ProgressCallback ca
         if (callback) {
             callback(100, "Model already exists: " + modelId);
         }
-        LOG_INFO("Model already exists: " + modelId);
+        utils::Logger::getInstance().info("Model already exists: " + modelId);
         return true;
     }
 
     if (callback) {
         callback(0, "Model not found. Please use download_model.sh script to download: " + modelId);
     }
-    LOG_INFO("Model not found. Please use download_model.sh script to download: " + modelId);
+    utils::Logger::getInstance().info("Model not found. Please use download_model.sh script to download: " + modelId);
     return false;
 }
 
 void ModelManager::unloadCurrentModel() {
     // Reset the state
-    translationModel_.reset();
+    model_.reset();
     modelLoaded_ = false;
     activeModel_ = ModelInfo{};
 }
 
 std::shared_ptr<ITranslationModel> ModelManager::getTranslationModel() {
-    std::lock_guard<std::mutex> lock(modelMutex_);
+    std::lock_guard<std::mutex> lock(queueMutex_);
     if (!modelLoaded_) {
         return nullptr;
     }
 
-    return translationModel_;
+    return model_;
 }
 
 TranslationResult ModelManager::translate(const std::string& text, const TranslationOptions& options) {
-    std::lock_guard<std::mutex> lock(modelMutex_);
-    if (!modelLoaded_ || !translationModel_) {
+    std::lock_guard<std::mutex> lock(queueMutex_);
+    if (!modelLoaded_ || !model_) {
         TranslationResult result;
         result.success = false;
         result.errorMessage = "No model loaded";
         return result;
     }
 
-    return translationModel_->translate(text, options);
+    return model_->translate(text, options);
 }
 
 std::future<TranslationResult> ModelManager::translateAsync(
@@ -241,82 +270,37 @@ std::future<TranslationResult> ModelManager::queueTranslation(
     return future;
 }
 
-std::string ModelManager::getModelPathFromConfig() const {
+bool ModelManager::scanForModels() {
     try {
-        // Get model path from config with proper path expansion
-        QString modelPath = QString::fromStdString(utils::Config::getInstance().getPath("translation.model_path"));
-
-        // Create directory if it doesn't exist
-        QDir dir(modelPath);
+        QDir dir(QString::fromStdString(modelPath_));
         if (!dir.exists()) {
-            dir.mkpath(".");
+            utils::Logger::getInstance().error("Model directory does not exist: " + modelPath_);
+            return false;
         }
 
-        return modelPath.toStdString();
-    } catch (const std::runtime_error& e) {
-        LOG_ERROR("Failed to get model path from config: " + std::string(e.what()));
-        throw;
-    }
-}
+        // Clear existing models
+        availableModels_.clear();
 
-void ModelManager::scanForModels() {
-    std::lock_guard<std::mutex> lock(modelsMutex_);
-    models_.clear();
-
-    QDir modelDir(QString::fromStdString(modelPath_));
-    if (!modelDir.exists()) {
-        LOG_ERROR("Model directory does not exist: " + modelPath_);
-        return;
-    }
-
-    QFileInfoList files = modelDir.entryInfoList(QDir::Files | QDir::NoDotAndDotDot);
-    for (const QFileInfo& file : files) {
-        if (file.suffix() == "bin" || file.suffix() == "ggml") {
-            ModelInfo info;
-            info.id = file.baseName().toStdString();
-            info.path = file.absoluteFilePath().toStdString();
-            info.size = file.size();
-            info.lastModified = file.lastModified().toSecsSinceEpoch();
-
-            // Detect model type and capabilities
-            if (info.id.find("nllb") != std::string::npos) {
-                info.capabilities.push_back("translation");
-                info.modelType = "nllb";
-                info.description = "NLLB-200 model for multilingual translation";
-
-                // Detect language pair from filename (e.g., nllb-ja-en for Japanese to English)
-                size_t langPos = info.id.find("-", info.id.find("nllb") + 4);
-                if (langPos != std::string::npos) {
-                    std::string langs = info.id.substr(langPos + 1);
-                    size_t sepPos = langs.find("-");
-                    if (sepPos != std::string::npos) {
-                        std::string srcLang = langs.substr(0, sepPos);
-                        std::string tgtLang = langs.substr(sepPos + 1);
-
-                        // Map short language codes to NLLB language codes
-                        if (srcLang == "ja") info.sourceLanguage = "jpn_Jpan";
-                        else if (srcLang == "en") info.sourceLanguage = "eng_Latn";
-                        else if (srcLang == "zh") info.sourceLanguage = "zho_Hans";
-                        else info.sourceLanguage = srcLang;
-
-                        if (tgtLang == "ja") info.targetLanguage = "jpn_Jpan";
-                        else if (tgtLang == "en") info.targetLanguage = "eng_Latn";
-                        else if (tgtLang == "zh") info.targetLanguage = "zho_Hans";
-                        else info.targetLanguage = tgtLang;
-                    }
-                }
-            } else {
-                // Generic model capabilities for other model types
-                info.capabilities.push_back("text-generation");
-                info.modelType = "general";
+        // Get all files in the directory
+        QFileInfoList files = dir.entryInfoList(QDir::Files | QDir::NoDotAndDotDot);
+        for (const QFileInfo& file : files) {
+            // Check if file is a model file (has .bin extension)
+            if (file.suffix() == "bin") {
+                ModelInfo modelInfo;
+                modelInfo.id = file.baseName().toStdString();
+                modelInfo.path = file.absoluteFilePath().toStdString();
+                modelInfo.size = file.size();
+                modelInfo.lastModified = file.lastModified().toSecsSinceEpoch();
+                availableModels_.push_back(modelInfo);
+                utils::Logger::getInstance().info("Found model: " + modelInfo.id);
             }
-
-            models_.push_back(info);
-            LOG_INFO("Added model: " + info.id + " at " + info.path + " (Type: " + info.modelType + ")");
         }
-    }
 
-    LOG_INFO("Total models found: " + std::to_string(models_.size()));
+        return true;
+    } catch (const std::exception& e) {
+        utils::Logger::getInstance().error("Error scanning for models: " + std::string(e.what()));
+        return false;
+    }
 }
 
 } // namespace translation

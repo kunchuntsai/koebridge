@@ -4,19 +4,10 @@
 #include <iomanip>
 #include <sstream>
 
-Logger& Logger::getInstance() {
-    static Logger instance;
-    return instance;
-}
+namespace koebridge {
+namespace utils {
 
-Logger::Logger() : currentLevel(LogLevel::INFO) {
-    // Initialize logger
-}
-
-void Logger::setLevel(LogLevel level) {
-    currentLevel = level;
-}
-
+namespace {
 std::string getCurrentTimeStamp() {
     auto now = std::chrono::system_clock::now();
     auto time = std::chrono::system_clock::to_time_t(now);
@@ -24,6 +15,20 @@ std::string getCurrentTimeStamp() {
     std::stringstream ss;
     ss << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S");
     return ss.str();
+}
+} // anonymous namespace
+
+Logger& Logger::getInstance() {
+    static Logger instance;
+    return instance;
+}
+
+Logger::Logger() : QObject(nullptr), currentLevel(LogLevel::INFO) {
+    // Initialize logger
+}
+
+void Logger::setLevel(LogLevel level) {
+    currentLevel = level;
 }
 
 void Logger::log(LogLevel level, const std::string& message) {
@@ -41,6 +46,7 @@ void Logger::log(LogLevel level, const std::string& message) {
     }
 
     std::cout << "[" << getCurrentTimeStamp() << "] [" << levelStr << "] " << message << std::endl;
+    emit logMessage(level, message);
 }
 
 void Logger::debug(const std::string& message) {
@@ -62,3 +68,6 @@ void Logger::error(const std::string& message) {
 void Logger::fatal(const std::string& message) {
     log(LogLevel::FATAL, message);
 }
+
+} // namespace utils
+} // namespace koebridge
