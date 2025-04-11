@@ -43,40 +43,28 @@ add_subdirectory(third_party/ggml)
 add_subdirectory(third_party/whisper.cpp)
 
 # Add source files
-set(SOURCES
-    src/main.cc
-    src/audio/audio_capture.cc
-    src/translation/model_manager.cc
-    src/translation/translation_service.cc
-    src/translation/translator.cc
-    src/translation/worker.cc
-    src/models/ggml_model.cc
-    src/utils/config.cc
-    src/utils/logger.cc
-    src/inference/engine.cc
-    src/llm/llm_model.cc
-    src/llm/nllb_model.cc
-    src/llm/llm_manager.cc
-    src/stt/whisper_wrapper.cc
+file(GLOB SOURCES
+    "src/*.cc"
+    "src/audio/*.cc"
+    "src/translation/*.cc"
+    "src/models/*.cc"
+    "src/utils/*.cc"
+    "src/inference/*.cc"
+    "src/llm/*.cc"
+    "src/stt/*.cc"
 )
 
 # Add header files
-set(HEADERS
-    src/audio/audio_capture.h
-    src/translation/model_manager.h
-    src/translation/translation_service.h
-    src/translation/translator.h
-    src/translation/worker.h
-    src/models/ggml_model.h
-    src/translation/data_structures.h
-    src/translation/interfaces/i_translation_service.h
-    src/utils/config.h
-    src/utils/logger.h
-    src/inference/engine.h
-    src/llm/llm_model.h
-    src/llm/nllb_model.h
-    src/llm/llm_manager.h
-    src/stt/whisper_wrapper.h
+file(GLOB HEADERS
+    "src/*.h"
+    "src/audio/*.h"
+    "src/translation/*.h"
+    "src/models/*.h"
+    "src/utils/*.h"
+    "src/inference/*.h"
+    "src/llm/*.h"
+    "src/stt/*.h"
+    "src/translation/interfaces/*.h"
 )
 
 # Create main executable

@@ -8,7 +8,9 @@ This directory contains unit tests for the KoeBridge project. The tests are orga
 tests/unit/
 ├── audio/              # Audio capture and processing tests
 ├── translation/        # Translation service tests
-└── models/            # Model implementation tests
+├── models/            # Model implementation tests
+├── llm/              # Language model tests
+└── stt/              # Speech-to-Text tests
 ```
 
 ## Running Tests
@@ -21,30 +23,35 @@ There are multiple ways to run the tests:
 ./scripts/run.sh --tests
 
 # Run specific test modules
-./scripts/run.sh --tests --audio      # Run audio tests only
+./scripts/run.sh --tests --audio       # Run audio tests only
 ./scripts/run.sh --tests --translation # Run translation tests only
-./scripts/run.sh --tests --models     # Run model tests only
+./scripts/run.sh --tests --models      # Run model tests only
+./scripts/run.sh --tests --stt         # Run STT tests only
 
 # Run with options
 ./scripts/run.sh --tests --debug --clean  # Clean build and run with debug symbols
 ```
 
-### 2. Using CMake/CTest Directly
+### 2. Using CTest (Alternative Method)
 ```bash
-# From project root
-mkdir -p build && cd build
-cmake ..
-make -j$(nproc)
-
-# Run all tests with CTest
+# Run all tests
 ctest --output-on-failure
 
-# Run specific tests
-./tests/unit/audio/audio_capture_test
-./tests/unit/translation/translation_service_test
-./tests/unit/llm/llm_model_test
-./tests/unit/llm/nllb_model_test
-./tests/unit/llm/llm_manager_test
+# Run only STT tests using CTest
+# Method 1: Using test name pattern
+ctest -R "stt" --output-on-failure
+
+# Method 2: Using test labels
+ctest -L "stt" --output-on-failure
+
+# Method 3: Using specific test names
+ctest -R "whisper_wrapper_test|realtime_transcriber_test" --output-on-failure
+
+# Method 4: With verbose output
+ctest -R "stt" -V --output-on-failure
+
+# Method 5: Run tests in parallel
+ctest -R "stt" -j4 --output-on-failure
 ```
 
 ### Test Options
@@ -55,14 +62,18 @@ ctest --output-on-failure
 - `--audio`: Run only audio-related tests
 - `--translation`: Run only translation-related tests
 - `--models`: Run only model-related tests
+- `--stt`: Run only speech-to-text tests
 - `--verbose`: Show detailed test output
 
 #### CTest Options
 - `--output-on-failure`: Show output for failed tests
 - `-V`: Verbose output
-- `-R pattern`: Run tests matching pattern
+- `-R pattern`: Run tests matching pattern (e.g., -R "stt" for STT tests)
 - `-E pattern`: Exclude tests matching pattern
 - `-j N`: Run N tests in parallel
+- `-L label`: Run tests with specific label
+- `--timeout N`: Set test timeout to N seconds
+- `--stop-on-failure`: Stop on first test failure
 
 ### Troubleshooting Test Failures
 
@@ -71,17 +82,19 @@ ctest --output-on-failure
    - PortAudio (for audio tests)
    - SentencePiece (for translation tests)
    - Qt6 (for UI components)
+   - Whisper (for STT tests)
 
 2. Common issues:
    - Missing libraries: Check CMake output for missing dependencies
    - Permission issues: Ensure model files are accessible
    - Resource conflicts: Close any applications using audio devices
    - Memory issues: Try running single tests in isolation
+   - Missing Whisper model: Ensure the Whisper model file is available for STT tests
 
 3. Debug failing tests:
    ```bash
    # Run specific test with GDB
-   gdb ./build/tests/unit/audio/audio_capture_test
+   gdb ./build/tests/unit/stt/whisper_wrapper_test
 
    # In GDB
    (gdb) break TestClassName::TestName
@@ -134,6 +147,7 @@ TEST_F(ModuleTest, TestName) {
 - PortAudio (for audio tests)
 - SentencePiece (for translation tests)
 - Qt6 (for UI and async functionality)
+- Whisper (for STT functionality)
 
 ## Debugging Tests
 
@@ -144,12 +158,12 @@ TEST_F(ModuleTest, TestName) {
 
 2. Use GDB for debugging:
 ```bash
-gdb ./build/tests/unit/audio/audio_capture_test
+gdb ./build/tests/unit/stt/whisper_wrapper_test
 ```
 
 3. Set breakpoints and run:
 ```bash
-(gdb) break ModuleTest::TestName
+(gdb) break TestClassName::TestName
 (gdb) run
 ```
 

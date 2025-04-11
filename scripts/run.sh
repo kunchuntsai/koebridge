@@ -11,6 +11,7 @@ show_usage() {
     echo "  --tests          Run the tests instead of the application"
     echo "  --audio          Run only audio tests (must be used with --tests)"
     echo "  --translation    Run only translation tests (must be used with --tests)"
+    echo "  --stt            Run only speech-to-text tests (must be used with --tests)"
     echo "  --clean          Clean the build directory before building"
     echo "  --build          Force rebuild before running (implied with --clean)"
 }
@@ -48,6 +49,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --translation)
             TEST_FILTER="translation*"
+            shift
+            ;;
+        --stt)
+            TEST_FILTER="stt*"
             shift
             ;;
         --clean)
@@ -116,8 +121,20 @@ function build_project() {
 if [ "$RUN_TESTS" = true ]; then
     echo "Preparing to run tests..."
     
-    # Check if test executables exist or force build is set
-    if [ ! -d "build" ] || [ ! -f "build/tests/audio_capture_test" ] || [ "$FORCE_BUILD" = true ]; then
+    # Determine which test executables to check based on filter
+    TEST_TO_CHECK=""
+    if [ "$TEST_FILTER" = "audio*" ]; then
+        TEST_TO_CHECK="audio_capture_test"
+    elif [ "$TEST_FILTER" = "translation*" ]; then
+        TEST_TO_CHECK="translation_service_test"
+    elif [ "$TEST_FILTER" = "stt*" ]; then
+        TEST_TO_CHECK="whisper_wrapper_test"
+    else
+        TEST_TO_CHECK="audio_capture_test"  # Default check for all tests
+    fi
+    
+    # Check if specific test executable exists or force build is set
+    if [ ! -d "build" ] || [ ! -f "build/tests/$TEST_TO_CHECK" ] || [ "$FORCE_BUILD" = true ]; then
         # Build with tests enabled
         build_project true
         if [ $? -ne 0 ]; then
@@ -125,7 +142,7 @@ if [ "$RUN_TESTS" = true ]; then
             exit 1
         fi
     else
-        echo "Tests already built. Skipping build step."
+        echo "Required tests already built. Skipping build step."
     fi
     
     # Change to build directory
@@ -136,6 +153,8 @@ if [ "$RUN_TESTS" = true ]; then
         "tests/audio_capture_test"
         "tests/translation_service_test"
         "tests/model_manager_test"
+        "tests/whisper_wrapper_test"
+        "tests/realtime_transcriber_test"
     )
     
     # Run the tests directly instead of using ctest
@@ -159,6 +178,14 @@ if [ "$RUN_TESTS" = true ]; then
         fi
         if [ -f "tests/model_manager_test" ]; then
             ./tests/model_manager_test
+        fi
+    elif [ "$TEST_FILTER" = "stt*" ]; then
+        echo "Running STT tests..."
+        if [ -f "tests/whisper_wrapper_test" ]; then
+            ./tests/whisper_wrapper_test
+        fi
+        if [ -f "tests/realtime_transcriber_test" ]; then
+            ./tests/realtime_transcriber_test
         fi
     else
         # Run all tests
