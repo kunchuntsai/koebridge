@@ -1,25 +1,31 @@
 #include "main_window.h"
 #include "translation_view.h"
+#include "settings_dialog.h"
+#include "utils/config.h"
 #include <QAction>
 #include <QMenu>
 #include <QMenuBar>
 #include <QApplication>
 #include <QMessageBox>
+#include <QStandardPaths>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
+    , settings("KoeBridge", "KoeBridge")
 {
     translationView = new TranslationView(this);
     setCentralWidget(translationView);
 
     createActions();
     createMenus();
+    loadSettings();
 
     setWindowTitle(tr("KoeBridge"));
 }
 
 MainWindow::~MainWindow() {
-    // Clean up resources
+    saveSettings();
+    delete settingsDialog;
 }
 
 void MainWindow::createActions() {
@@ -66,8 +72,78 @@ void MainWindow::stopTranslation() {
 }
 
 void MainWindow::showSettings() {
-    // Show settings dialog
-    QMessageBox::information(this, tr("Settings"), tr("Settings dialog would appear here."));
+    if (!settingsDialog) {
+        settingsDialog = new SettingsDialog(this);
+    }
+
+    if (settingsDialog->exec() == QDialog::Accepted) {
+        applySettings();
+    }
+}
+
+void MainWindow::applySettings() {
+    auto& config = koebridge::utils::Config::getInstance();
+
+    // Apply audio device settings
+    QString audioDevice = settingsDialog->getAudioDevice();
+    settings.setValue("audio/device", audioDevice);
+
+    // Apply model paths
+    QString whisperModelPath = settingsDialog->getWhisperModelPath();
+    QString translationModelPath = settingsDialog->getTranslationModelPath();
+    config.setString("models.whisper_path", whisperModelPath.toStdString());
+    config.setString("models.translation_path", translationModelPath.toStdString());
+
+    // Save config to file
+    std::string configPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation).toStdString() + "/config.ini";
+    if (!config.save(configPath)) {
+        QMessageBox::warning(this, tr("Settings"),
+            tr("Failed to save configuration to file. Some settings may be lost when the application closes."));
+    }
+
+    // Sync QSettings to disk
+    settings.sync();
+
+    // TODO: Apply settings to audio capture and model manager
+    // This will be implemented when we connect these components
+}
+
+void MainWindow::loadSettings() {
+    // Load window geometry from QSettings
+    restoreGeometry(settings.value("window/geometry").toByteArray());
+    restoreState(settings.value("window/state").toByteArray());
+
+    // Load other settings from Config singleton
+    auto& config = koebridge::utils::Config::getInstance();
+    if (!config.load(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation).toStdString() + "/config.ini")) {
+        // If no config file exists, try to load from default locations
+        std::vector<std::string> configPaths = {
+            "config/config.ini",
+            "config/default_settings.json"
+        };
+        for (const auto& path : configPaths) {
+            if (config.load(path)) {
+                break;
+            }
+        }
+    }
+}
+
+void MainWindow::saveSettings() {
+    // Save window geometry to QSettings
+    settings.setValue("window/geometry", saveGeometry());
+    settings.setValue("window/state", saveState());
+
+    // Save config to file
+    auto& config = koebridge::utils::Config::getInstance();
+    std::string configPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation).toStdString() + "/config.ini";
+    if (!config.save(configPath)) {
+        QMessageBox::warning(this, tr("Settings"),
+            tr("Failed to save configuration to file. Some settings may be lost when the application closes."));
+    }
+
+    // Sync QSettings to disk
+    settings.sync();
 }
 
 void MainWindow::updateTranslatedText(const QString& text) {

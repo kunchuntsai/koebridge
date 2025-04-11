@@ -1,42 +1,82 @@
 #include "config.h"
+#include "logger.h"
 #include <fstream>
 #include <sstream>
 #include <cstdlib>
 #include <stdexcept>
+#include <iostream>
+#include <algorithm>
 
 namespace koebridge {
 namespace utils {
+
+// Helper function to trim whitespace from both ends of a string
+std::string trim(const std::string& str) {
+    auto start = std::find_if_not(str.begin(), str.end(), [](unsigned char c) {
+        return std::isspace(c);
+    });
+    auto end = std::find_if_not(str.rbegin(), str.rend(), [](unsigned char c) {
+        return std::isspace(c);
+    }).base();
+    return (start < end) ? std::string(start, end) : std::string();
+}
 
 Config& Config::getInstance() {
     static Config instance;
     return instance;
 }
 
-bool Config::load(const std::string& filePath) {
-    std::ifstream file(filePath);
+bool Config::load(const std::string& configPath) {
+    std::ifstream file(configPath);
     if (!file.is_open()) {
+        LOG_ERROR("Failed to open config file: " + configPath);
         return false;
     }
 
+    LOG_INFO("Loading configuration from: " + configPath);
     std::string line;
+    int lineNumber = 0;
+
+    // Clear existing configuration
+    configData.clear();
+    LOG_DEBUG("Cleared existing configuration");
+
     while (std::getline(file, line)) {
-        // Skip comments and empty lines
+        lineNumber++;
+        line = trim(line);
+
+        // Skip empty lines and comments
         if (line.empty() || line[0] == '#') {
+            LOG_DEBUG("Line " + std::to_string(lineNumber) + ": Skipping " +
+                     (line.empty() ? "empty line" : "comment"));
             continue;
         }
 
-        std::istringstream iss(line);
-        std::string key, value;
-        if (std::getline(iss, key, '=') && std::getline(iss, value)) {
-            // Trim whitespace
-            key.erase(0, key.find_first_not_of(" \t"));
-            key.erase(key.find_last_not_of(" \t") + 1);
-            value.erase(0, value.find_first_not_of(" \t"));
-            value.erase(value.find_last_not_of(" \t") + 1);
+        // Parse key-value pairs
+        size_t pos = line.find('=');
+        if (pos != std::string::npos) {
+            std::string key = trim(line.substr(0, pos));
+            std::string value = trim(line.substr(pos + 1));
 
-            configData[key] = value;
+            if (!key.empty()) {
+                configData[key] = value;
+                LOG_DEBUG("Line " + std::to_string(lineNumber) + ": Loaded config - " + key + " = " + value);
+            } else {
+                LOG_WARNING("Line " + std::to_string(lineNumber) + ": Empty key found, skipping");
+            }
+        } else {
+            LOG_WARNING("Line " + std::to_string(lineNumber) + ": Invalid format (no '=' found): " + line);
         }
     }
+
+    LOG_INFO("Configuration loaded successfully with " + std::to_string(configData.size()) + " entries");
+
+    // Log all loaded configuration entries
+    LOG_INFO("=== Configuration Content ===");
+    for (const auto& [key, value] : configData) {
+        LOG_INFO(key + " = " + value);
+    }
+    LOG_INFO("==========================");
 
     return true;
 }
@@ -59,8 +99,17 @@ std::string Config::getString(const std::string& key, const std::string& default
     return (it != configData.end()) ? it->second : defaultValue;
 }
 
-std::string Config::getPath(const std::string& key, const std::string& defaultValue) {
-    return expandPath(getString(key, defaultValue));
+std::string Config::getPath(const std::string& key) {
+    LOG_DEBUG("Attempting to get path for key: " + key);
+    auto it = configData.find(key);
+    if (it == configData.end()) {
+        LOG_ERROR("Config key not found: " + key);
+        throw std::runtime_error("Config key not found: " + key);
+    }
+
+    std::string expandedPath = expandPath(it->second);
+    LOG_DEBUG("Retrieved path for " + key + ": " + expandedPath);
+    return expandedPath;
 }
 
 int Config::getInt(const std::string& key, int defaultValue) {

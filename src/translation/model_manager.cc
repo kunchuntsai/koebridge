@@ -19,11 +19,7 @@ ModelManager::ModelManager(const std::string& modelPath)
     : modelPath_(modelPath.empty() ? getModelPathFromConfig() : modelPath)
     , modelLoaded_(false)
     , shouldStop_(false) {
-
-    // Load configuration if not already loaded
-    if (!utils::Config::getInstance().load("config/config.ini")) {
-        LOG_ERROR("Failed to load configuration file");
-    }
+    // Model path is already set from getModelPathFromConfig() or the provided path
 }
 
 ModelManager::~ModelManager() {
@@ -246,16 +242,21 @@ std::future<TranslationResult> ModelManager::queueTranslation(
 }
 
 std::string ModelManager::getModelPathFromConfig() const {
-    // Get model path from config with proper path expansion
-    QString modelPath = QString::fromStdString(utils::Config::getInstance().getPath("translation.model_path", "./_dataset/models"));
+    try {
+        // Get model path from config with proper path expansion
+        QString modelPath = QString::fromStdString(utils::Config::getInstance().getPath("translation.model_path"));
 
-    // Create directory if it doesn't exist
-    QDir dir(modelPath);
-    if (!dir.exists()) {
-        dir.mkpath(".");
+        // Create directory if it doesn't exist
+        QDir dir(modelPath);
+        if (!dir.exists()) {
+            dir.mkpath(".");
+        }
+
+        return modelPath.toStdString();
+    } catch (const std::runtime_error& e) {
+        LOG_ERROR("Failed to get model path from config: " + std::string(e.what()));
+        throw;
     }
-
-    return modelPath.toStdString();
 }
 
 void ModelManager::scanForModels() {

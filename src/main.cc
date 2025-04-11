@@ -160,13 +160,30 @@ private:
 int main(int argc, char* argv[]) {
     QApplication app(argc, argv);
 
-    try {
-        Application application;
-        return app.exec();
-    } catch (const std::exception& e) {
-        qCritical() << "Fatal error:" << e.what();
+    // Initialize configuration
+    std::vector<std::string> configPaths = {
+        "config/config.ini",
+        "config/default_settings.json",
+        QStandardPaths::writableLocation(QStandardPaths::AppDataLocation).toStdString() + "/config.ini"
+    };
+
+    bool configLoaded = false;
+    for (const auto& path : configPaths) {
+        if (koebridge::utils::Config::getInstance().load(path)) {
+            configLoaded = true;
+            break;
+        }
+    }
+
+    if (!configLoaded) {
+        qWarning() << "No configuration file found. Please ensure config/config.ini exists.";
         return 1;
     }
+
+    MainWindow window;
+    window.show();
+
+    return app.exec();
 }
 
 #include "main.moc"

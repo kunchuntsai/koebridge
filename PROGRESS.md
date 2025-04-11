@@ -185,26 +185,26 @@
    - ✅ Layout management
    - ✅ Text updates
 
-3. 🔄 **Settings Dialog**
+3. ✅ **Settings Dialog**
    - ✅ Audio device configuration
    - ✅ Model path settings
-   - 🔄 Settings persistence
+   - ✅ Settings persistence
    - 🔄 User input validation
 
 ## Next Steps
-1. **Short Term (1-2 weeks)**:
+1. **Short Term**:
    - ✅ Complete Whisper integration
-   - Finish settings persistence
+   - ✅ Finish settings persistence
    - Add error handling and recovery
    - Implement user input validation
 
-2. **Medium Term (2-4 weeks)**:
+2. **Medium Term**:
    - Optimize translation performance
    - Enhance UI features
    - Add advanced model features
    - Implement caching mechanisms
 
-3. **Long Term (1-2 months)**:
+3. **Long Term**:
    - Add support for multiple model architectures
    - Implement advanced UI features
    - Optimize resource usage

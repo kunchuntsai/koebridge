@@ -7,10 +7,12 @@
 
 #include <QMainWindow>
 #include <QString>
+#include <QSettings>
 
 class TranslationView;
 class QAction;
 class QMenu;
+class SettingsDialog;
 
 /**
  * @class MainWindow
@@ -57,6 +59,11 @@ private slots:
      */
     void showSettings();
 
+    /**
+     * @brief Apply the settings
+     */
+    void applySettings();
+
 private:
     /**
      * @brief Create application actions
@@ -68,7 +75,19 @@ private:
      */
     void createMenus();
 
+    /**
+     * @brief Load the settings
+     */
+    void loadSettings();
+
+    /**
+     * @brief Save the settings
+     */
+    void saveSettings();
+
     TranslationView* translationView; ///< Main translation view widget
+    SettingsDialog* settingsDialog;    ///< Settings dialog widget
+    QSettings settings;                ///< Application settings
 
     QMenu* fileMenu;    ///< File menu
     QMenu* toolsMenu;   ///< Tools menu

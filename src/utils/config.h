@@ -54,10 +54,10 @@ public:
     /**
      * @brief Get a path configuration value with expansion
      * @param key The configuration key
-     * @param defaultValue Default value if key is not found
-     * @return std::string The expanded path value
+     * @return std::string The expanded path
+     * @throw std::runtime_error if the key is not found
      */
-    std::string getPath(const std::string& key, const std::string& defaultValue = "");
+    std::string getPath(const std::string& key);
 
     /**
      * @brief Get an integer configuration value
